@@ -1,0 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Remove tap flash on mobile */
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Prevent text size bump on orientation change (iOS) */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-dark-900 text-dark-100 font-sans antialiased;
+    min-height: 100dvh;
+    /* Safe area padding for iOS notch / home indicator */
+    padding-left:   env(safe-area-inset-left);
+    padding-right:  env(safe-area-inset-right);
+    overscroll-behavior-y: contain; /* Prevent pull-to-refresh bounce */
+  }
+
+  /* Native-feeling scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track  { @apply bg-dark-800; }
+  ::-webkit-scrollbar-thumb  { @apply bg-dark-500 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-brand-500; }
+
+  /* Better date/time/number inputs on mobile */
+  input[type="date"],
+  input[type="time"],
+  input[type="number"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Remove number input spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+
+  /* ── Glass card ──────────────────────────────────────────────────────────── */
+  .glass-card {
+    @apply bg-dark-800 border border-dark-600 rounded-2xl;
+  }
+
+  /* ── Input fields — big touch targets ───────────────────────────────────── */
+  .input-field {
+    @apply w-full bg-dark-700 border border-dark-500 rounded-xl px-4
+           text-dark-100 placeholder-dark-400
+           focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
+           transition-all duration-200 text-base;
+    /* Minimum 48px height for touch — no accidental taps */
+    min-height: 48px;
+    padding-top:    0.75rem;
+    padding-bottom: 0.75rem;
+    /* Prevent iOS zoom on focus (font must be ≥16px) */
+    font-size: 16px;
+  }
+
+  /* Select inherits from input-field */
+  select.input-field {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%235c5c7e'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.1rem;
+    padding-right: 2.5rem;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* ── Primary button ──────────────────────────────────────────────────────── */
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-500 active:bg-brand-700
+           text-white font-semibold rounded-xl px-5
+           transition-all duration-200 shadow-lg shadow-brand-600/25
+           hover:shadow-brand-500/40 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
+  }
+
+  /* ── Ghost button ────────────────────────────────────────────────────────── */
+  .btn-ghost {
+    @apply flex items-center gap-1.5 text-dark-200 hover:text-white hover:bg-dark-600
+           rounded-xl px-3
+           transition-all duration-200 text-sm font-medium;
+    min-height: 40px;
+  }
+
+  /* ── Icon button (square) — generous touch target ───────────────────────── */
+  .btn-icon {
+    @apply flex items-center justify-center rounded-xl border border-dark-600
+           text-dark-300 hover:text-white hover:bg-dark-600
+           transition-all duration-150;
+    min-width:  44px;
+    min-height: 44px;
+  }
+
+  .btn-icon:disabled {
+    @apply text-dark-600 border-dark-700 cursor-not-allowed;
+  }
+
+  /* ── Badge ───────────────────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold;
+    white-space: nowrap;
+  }
+}
+
+/* ── Animations ─────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.25s ease-out both;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Safe-area bottom padding helper (for fixed footer) */
+  .pb-safe {
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Hover lift for .btn-primary — pointer devices only (not touch) ─────────── */
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:not(:disabled):hover {
+    transform: scale(1.02);
+  }
+}
