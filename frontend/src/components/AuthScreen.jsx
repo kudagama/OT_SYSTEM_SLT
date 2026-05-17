@@ -19,7 +19,9 @@ export default function AuthScreen({ onAuth }) {
     const e = {};
     if (mode === 'register' && !form.name.trim())       e.name       = 'Name is required.';
     if (mode === 'register' && !form.employeeId.trim()) e.employeeId = 'Employee ID is required.';
-    if (!form.email.trim())    e.email    = 'Email is required.';
+    if (!form.email.trim()) {
+      e.email = mode === 'login' ? 'Email or Service ID is required.' : 'Email is required.';
+    }
     if (!form.password.trim()) e.password = 'Password is required.';
     if (mode === 'register' && form.password.length < 6)
       e.password = 'Password must be at least 6 characters.';
@@ -124,16 +126,16 @@ export default function AuthScreen({ onAuth }) {
               </div>
             )}
 
-            {/* Email */}
+            {/* Email / Service ID */}
             <div>
               <label htmlFor="auth-email" className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
-                Email
+                {mode === 'login' ? 'Email or Service ID' : 'Email'}
               </label>
               <input
                 id="auth-email"
-                type="email"
+                type={mode === 'login' ? 'text' : 'email'}
                 name="email"
-                placeholder="you@example.com"
+                placeholder={mode === 'login' ? 'you@example.com or 021894' : 'you@example.com'}
                 autoComplete="email"
                 value={form.email}
                 onChange={handleChange}

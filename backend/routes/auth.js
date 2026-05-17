@@ -53,10 +53,15 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+      return res.status(400).json({ success: false, message: 'Email/Service ID and password are required.' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ 
+      $or: [
+        { email: email.toLowerCase() },
+        { employeeId: email } // allow login using service ID
+      ]
+    });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
