@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Dashboard     from './components/Dashboard';
-import OTForm        from './components/OTForm';
-import OTHistory     from './components/OTHistory';
-import AuthScreen    from './components/AuthScreen';
-import ProfileModal  from './components/ProfileModal';
-import { api }       from './api';
+import Dashboard       from './components/Dashboard';
+import OTForm          from './components/OTForm';
+import OTHistory       from './components/OTHistory';
+import AuthScreen      from './components/AuthScreen';
+import ProfileModal    from './components/ProfileModal';
+import WeeklySchedule  from './components/WeeklySchedule';
+import { api }         from './api';
 
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 function getStoredUser() {
@@ -192,7 +193,10 @@ export default function App() {
           onToday={goToToday}
         />
 
-        {/* Form — only show when on current month (you can't add OT for future) */}
+        {/* Weekly shift schedule */}
+        <WeeklySchedule userId={user.id} />
+
+        {/* Form — only show when on current month */}
         <OTForm
           onSaved={handleSaved}
           editRecord={editRecord}
