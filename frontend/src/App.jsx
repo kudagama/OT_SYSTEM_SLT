@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Dashboard  from './components/Dashboard';
 import OTForm     from './components/OTForm';
 import OTHistory  from './components/OTHistory';
@@ -15,9 +15,7 @@ export default function App() {
 
   const [user, setUser]             = useState(getStoredUser);
   const [records, setRecords]       = useState([]);
-  const [summary, setSummary]       = useState(null);
   const [loadingRec, setLoadingRec] = useState(true);
-  const [loadingSum, setLoadingSum] = useState(true);
   const [editRecord, setEditRecord] = useState(null);
   const [error, setError]           = useState(null);
 
@@ -74,23 +72,17 @@ export default function App() {
     }
   }, []);
 
-  // ── Fetch summary for selected month ─────────────────────────────────────
-  const fetchSummary = useCallback(async (year, month) => {
-    setLoadingSum(true);
-    try {
-      const res = await api.getSummary(year, month);
-      setSummary(res);
-    } catch {
-      // Non-critical
-    } finally {
-      setLoadingSum(false);
-    }
-  }, []);
-
-  // Reload summary whenever selected month changes
-  useEffect(() => {
-    if (user) fetchSummary(selYear, selMonth);
-  }, [user, selYear, selMonth, fetchSummary]);
+  // ── Compute summary CLIENT-SIDE from records (always in sync, no extra API call) ──
+  const summary = useMemo(() => {
+    const filtered = records.filter((r) => {
+      const d = new Date(r.date);
+      return d.getUTCFullYear() === selYear && d.getUTCMonth() + 1 === selMonth;
+    });
+    return {
+      totalOTHours: filtered.reduce((sum, r) => sum + (r.otHours || 0), 0),
+      totalEntries: filtered.length,
+    };
+  }, [records, selYear, selMonth]);
 
   useEffect(() => {
     if (user) fetchRecords();
@@ -104,27 +96,24 @@ export default function App() {
     localStorage.removeItem('ot_user');
     setUser(null);
     setRecords([]);
-    setSummary(null);
     setEditRecord(null);
     setError(null);
   }
 
   // ── Data handlers ─────────────────────────────────────────────────────────
   const handleSaved = useCallback(() => {
-    fetchRecords();
-    fetchSummary(selYear, selMonth);
+    fetchRecords();           // re-fetch records — summary auto-updates via useMemo
     setEditRecord(null);
-  }, [fetchRecords, fetchSummary, selYear, selMonth]);
+  }, [fetchRecords]);
 
   const handleDelete = useCallback(async (id) => {
     try {
       await api.remove(id);
-      setRecords((prev) => prev.filter((r) => r._id !== id));
-      fetchSummary(selYear, selMonth);
+      setRecords((prev) => prev.filter((r) => r._id !== id)); // optimistic — summary auto-updates
     } catch (err) {
       setError(err.message);
     }
-  }, [fetchSummary, selYear, selMonth]);
+  }, []);
 
   // ── Not logged in ─────────────────────────────────────────────────────────
   if (!user) return <AuthScreen onAuth={handleAuth} />;
@@ -175,7 +164,7 @@ export default function App() {
 
         <Dashboard
           summary={summary}
-          loading={loadingSum}
+          loading={loadingRec}
           selYear={selYear}
           selMonth={selMonth}
           isCurrentMonth={isCurrentMonth}

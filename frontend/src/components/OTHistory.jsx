@@ -38,7 +38,10 @@ function ConfirmModal({ record, onConfirm, onCancel }) {
 }
 
 function OTCard({ record, onEdit, onDelete }) {
-  const colors = SHIFT_COLORS[record.shiftType] || SHIFT_COLORS['Off'];
+  // Fallback to a neutral style if shift type isn't in the color map
+  const colors = SHIFT_COLORS[record.shiftType] || {
+    bg: 'bg-slate-500/15', text: 'text-slate-300', border: 'border-slate-500/30',
+  };
 
   return (
     <div className="flex items-start gap-3 p-3.5 bg-dark-700/40 hover:bg-dark-700/70 rounded-xl border border-dark-600/50 hover:border-dark-500 transition-all duration-200 group animate-fade-in">
