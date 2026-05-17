@@ -12,8 +12,20 @@ module.exports = async function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Attach user info to request (role required for admin middleware)
-    req.user = { id: decoded.id, name: decoded.name, email: decoded.email, employeeId: decoded.employeeId, role: decoded.role || 'user' };
+
+    // Always fetch role from DB — ensures old tokens (without role in payload) still work
+    const dbUser = await User.findById(decoded.id).select('name email employeeId role').lean();
+    if (!dbUser) {
+      return res.status(401).json({ success: false, message: 'User not found. Please log in again.' });
+    }
+
+    req.user = {
+      id:         decoded.id,
+      name:       dbUser.name,
+      email:      dbUser.email,
+      employeeId: dbUser.employeeId,
+      role:       dbUser.role || 'user',
+    };
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token. Please log in again.' });

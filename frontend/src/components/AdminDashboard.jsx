@@ -199,7 +199,12 @@ export default function AdminDashboard({ adminUser, onLogout }) {
                   <div className="text-right shrink-0 space-y-0.5">
                     <p className="text-sm font-bold text-violet-300">{fmt(u.totalOTHours)}h</p>
                     <p className="text-[10px] text-dark-400">{u.totalEntries} days</p>
-                    <p className="text-[10px] text-dark-500">{relativeDate(u.lastEntryDate)}</p>
+                    {u.secondOffEntries > 0 && (
+                      <span className="inline-block text-[9px] font-bold text-cyan-300
+                                       bg-cyan-500/10 border border-cyan-500/25 px-1.5 py-0.5 rounded">
+                        2nd Off ×{u.secondOffEntries}
+                      </span>
+                    )}
                   </div>
                 </button>
               ))}
@@ -247,6 +252,12 @@ function EmployeeDetail({ user, records, allRecords, loading, filterYear, filter
   const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   const now      = new Date();
 
+  // 2nd Off records for this month
+  const monthSecondOff = useMemo(
+    () => records.filter((r) => r.shiftType === '2nd Off'),
+    [records]
+  );
+
   // Available months that have records
   const availableMonths = useMemo(() => {
     const set = new Set();
@@ -286,20 +297,48 @@ function EmployeeDetail({ user, records, allRecords, loading, filterYear, filter
       </div>
 
       {/* All-time mini stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500 text-center">
-          <p className="text-lg font-extrabold text-brand-300">{fmt(user.totalOTHours)}</p>
-          <p className="text-[9px] text-dark-400 uppercase tracking-wide">Total OT hrs</p>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500">
+          <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-0.5">Total OT</p>
+          <p className="text-base font-extrabold text-brand-300 leading-none">
+            {fmt(user.totalOTHours)}
+            <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
+          </p>
+          <p className="text-[10px] text-dark-500">{user.totalEntries} days</p>
         </div>
-        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500 text-center">
-          <p className="text-lg font-extrabold text-violet-300">{user.totalEntries}</p>
-          <p className="text-[9px] text-dark-400 uppercase tracking-wide">Total Days</p>
-        </div>
-        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500 text-center">
-          <p className="text-lg font-extrabold text-teal-300">{fmt(monthOTHours)}</p>
-          <p className="text-[9px] text-dark-400 uppercase tracking-wide">This Month</p>
+        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500">
+          <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-0.5">This Month OT</p>
+          <p className="text-base font-extrabold text-teal-300 leading-none">
+            {fmt(monthOTHours)}
+            <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
+          </p>
+          <p className="text-[10px] text-dark-500">{monthRecords.length} days</p>
         </div>
       </div>
+
+      {/* 2nd Off stats — only if any */}
+      {(user.secondOffEntries > 0 || monthSecondOff.length > 0) && (
+        <div className="flex gap-2 mb-3">
+          {/* All-time 2nd Off */}
+          <div className="flex-1 bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5">
+            <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">All-Time 2nd Off OT</p>
+            <p className="text-base font-extrabold text-cyan-300 leading-none">
+              {fmt(user.secondOffHours)}
+              <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
+            </p>
+            <p className="text-[10px] text-cyan-500">{user.secondOffEntries} occurrences</p>
+          </div>
+          {/* This month 2nd Off */}
+          <div className="flex-1 bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5">
+            <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">This Month 2nd Off</p>
+            <p className="text-base font-extrabold text-cyan-300 leading-none">
+              {fmt(monthSecondOff.reduce((s, r) => s + (r.otHours || 0), 0))}
+              <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
+            </p>
+            <p className="text-[10px] text-cyan-500">{monthSecondOff.length} occurrences</p>
+          </div>
+        </div>
+      )}
 
       {/* Month navigator */}
       <div className="flex items-center gap-2 mb-3">
@@ -342,13 +381,27 @@ function EmployeeDetail({ user, records, allRecords, loading, filterYear, filter
             const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'UTC' });
             return (
               <div key={r._id}
-                className="flex items-center gap-3 px-3 py-2.5 bg-dark-700/40 rounded-xl border border-dark-600">
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border
+                  ${r.shiftType === '2nd Off'
+                    ? 'bg-cyan-500/10 border-cyan-500/25'
+                    : 'bg-dark-700/40 border-dark-600'
+                  }`}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-white truncate">{dateStr}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-semibold text-white truncate">{dateStr}</p>
+                    {r.shiftType === '2nd Off' && (
+                      <span className="text-[9px] font-bold text-cyan-300 bg-cyan-500/20
+                                       border border-cyan-500/30 px-1.5 py-0.5 rounded shrink-0">
+                        2nd Off
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[10px] text-dark-400 truncate">{r.shiftType}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-brand-300">{fmt(r.otHours)}h</p>
+                  <p className={`text-sm font-bold ${r.shiftType === '2nd Off' ? 'text-cyan-300' : 'text-brand-300'}`}>
+                    {fmt(r.otHours)}h
+                  </p>
                   {r.otStartTime && r.otEndTime && (
                     <p className="text-[10px] text-dark-500">{r.otStartTime}–{r.otEndTime}</p>
                   )}

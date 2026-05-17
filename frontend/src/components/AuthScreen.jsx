@@ -39,7 +39,6 @@ export default function AuthScreen({ onAuth }) {
         : await api.register({ name: form.name, employeeId: form.employeeId, email: form.email, password: form.password });
 
       localStorage.setItem('ot_token', res.token);
-      localStorage.setItem('ot_user',  JSON.stringify(res.user));
       onAuth(res.user);
     } catch (err) {
       setApiError(err.message);

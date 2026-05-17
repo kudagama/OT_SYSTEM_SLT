@@ -20,10 +20,12 @@ router.get('/users', async (req, res) => {
     // Aggregate OT stats per user
     const stats = await OTRecord.aggregate([
       { $group: {
-        _id:           '$userId',
-        totalOTHours:  { $sum: '$otHours' },
-        totalEntries:  { $sum: 1 },
-        lastEntryDate: { $max: '$date' },
+        _id:              '$userId',
+        totalOTHours:     { $sum: '$otHours' },
+        totalEntries:     { $sum: 1 },
+        lastEntryDate:    { $max: '$date' },
+        secondOffHours:   { $sum: { $cond: [{ $eq: ['$shiftType', '2nd Off'] }, '$otHours', 0] } },
+        secondOffEntries: { $sum: { $cond: [{ $eq: ['$shiftType', '2nd Off'] }, 1, 0] } },
       }},
     ]);
 
@@ -33,15 +35,17 @@ router.get('/users', async (req, res) => {
     const result = users.map((u) => {
       const s = statsMap[String(u._id)] || {};
       return {
-        id:            u._id,
-        name:          u.name,
-        employeeId:    u.employeeId || '—',
-        email:         u.email,
-        role:          u.role || 'user',
-        registeredAt:  u.createdAt,
-        totalOTHours:  s.totalOTHours || 0,
-        totalEntries:  s.totalEntries || 0,
-        lastEntryDate: s.lastEntryDate || null,
+        id:               u._id,
+        name:             u.name,
+        employeeId:       u.employeeId || '—',
+        email:            u.email,
+        role:             u.role || 'user',
+        registeredAt:     u.createdAt,
+        totalOTHours:     s.totalOTHours     || 0,
+        totalEntries:     s.totalEntries     || 0,
+        lastEntryDate:    s.lastEntryDate    || null,
+        secondOffHours:   s.secondOffHours   || 0,
+        secondOffEntries: s.secondOffEntries || 0,
       };
     });
 

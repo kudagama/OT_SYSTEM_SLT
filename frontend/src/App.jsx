@@ -10,14 +10,16 @@ import { api }         from './api';
 import { getShiftDurationHours } from './constants';
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
-function getStoredUser() {
-  try { return JSON.parse(localStorage.getItem('ot_user')); } catch { return null; }
+function getStoredToken() {
+  localStorage.removeItem('ot_user'); // purge legacy cached user — we load from DB now
+  return localStorage.getItem('ot_token');
 }
 
 export default function App() {
   const now = new Date();
 
-  const [user, setUser]               = useState(getStoredUser);
+  const [user, setUser]               = useState(null);   // hydrated from DB
+  const [hydrating, setHydrating]     = useState(!!getStoredToken()); // show spinner on startup
   const [records, setRecords]         = useState([]);
   const [schedule, setSchedule]       = useState({});   // { "YYYY-MM-DD": "shiftType" }
   const [loadingRec, setLoadingRec]   = useState(true);
@@ -54,6 +56,17 @@ export default function App() {
     setSelYear(now.getFullYear());
     setSelMonth(now.getMonth() + 1);
   }
+
+  // ── Hydrate user from DB on startup ──────────────────────────────────────
+  useEffect(() => {
+    if (!getStoredToken()) { setHydrating(false); return; }
+    api.me()
+      .then((res) => setUser(res.user ?? res))   // /auth/me returns { user } or user directly
+      .catch(() => {
+        localStorage.removeItem('ot_token');      // token invalid — force re-login
+      })
+      .finally(() => setHydrating(false));
+  }, []);
 
   // ── Fetch records ─────────────────────────────────────────────────────────
   const fetchRecords = useCallback(async () => {
@@ -150,15 +163,13 @@ export default function App() {
   function handleAuth(loggedInUser) { setUser(loggedInUser); }
 
   function handleLogout() {
-    localStorage.removeItem('ot_token');
-    localStorage.removeItem('ot_user');
+    localStorage.removeItem('ot_token');    // only the token — no ot_user to clean
     setUser(null); setRecords([]); setSchedule({});
     setEditRecord(null); setError(null);
   }
 
   function handleProfileUpdate(updatedUser) {
-    setUser(updatedUser);
-    localStorage.setItem('ot_user', JSON.stringify(updatedUser));
+    setUser(updatedUser);                   // in-memory only — no localStorage
   }
 
   // ── Data handlers ─────────────────────────────────────────────────────────
@@ -173,6 +184,25 @@ export default function App() {
       setRecords((prev) => prev.filter((r) => r._id !== id));
     } catch (err) { setError(err.message); }
   }, []);
+
+  // ── Loading state while hydrating from DB ────────────────────────────────
+  if (hydrating) {
+    return (
+      <div className="min-h-dvh bg-dark-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600
+                          flex items-center justify-center shadow-2xl shadow-brand-500/40">
+            <span className="text-white text-xl font-extrabold">OT</span>
+          </div>
+          <svg className="w-5 h-5 animate-spin text-brand-400" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <p className="text-xs text-dark-400">Loading your account…</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Not logged in ─────────────────────────────────────────────────────────
   if (!user) return <AuthScreen onAuth={handleAuth} />;
