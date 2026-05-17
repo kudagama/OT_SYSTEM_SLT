@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { SHIFT_TYPES, SHIFT_COLORS } from '../constants';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -32,19 +32,27 @@ function shortShift(shift) {
 // Fully controlled — schedule state lives in App.jsx
 // Props: schedule, saving, onSetShift(dateKey, shiftType), onClearShift(dateKey)
 // ─────────────────────────────────────────────────────────────────────────────
-export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift }) {
+export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift, selYear, selMonth }) {
   const today     = useMemo(() => new Date(), []);
   const todayKey  = toKey(today);
 
   const [pickerDay,   setPickerDay]   = useState(null);
   const [viewDay,     setViewDay]     = useState(null);
-  const [weekOffset,  setWeekOffset]  = useState(0);
+  const [refDate,     setRefDate]     = useState(today);
+
+  // Sync with Dashboard's selected month/year
+  useEffect(() => {
+    if (selYear && selMonth) {
+      if (refDate.getFullYear() !== selYear || refDate.getMonth() + 1 !== selMonth) {
+        // Jump to the 1st day of the selected month
+        setRefDate(new Date(selYear, selMonth - 1, 1));
+      }
+    }
+  }, [selYear, selMonth]); // intentionally NOT including refDate in dependencies
 
   const displayDates = useMemo(() => {
-    const ref = new Date(today);
-    ref.setDate(today.getDate() + weekOffset * 7);
-    return getWeekDates(ref);
-  }, [today, weekOffset]);
+    return getWeekDates(refDate);
+  }, [refDate]);
 
   const weekLabel = useMemo(() => {
     const first = displayDates[0];
@@ -76,22 +84,22 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
           )}
-          <button onClick={() => setWeekOffset((o) => o - 1)} className="btn-icon" title="Previous week">
+          <button onClick={() => setRefDate(d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))} className="btn-icon" title="Previous week">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          {weekOffset !== 0 && (
-            <button
-              onClick={() => setWeekOffset(0)}
-              className="text-[10px] font-bold text-brand-300 bg-brand-500/10
-                         border border-brand-500/25 px-2 py-1 rounded-lg
-                         hover:bg-brand-500/20 transition-all duration-150"
-            >
-              Today
-            </button>
-          )}
-          <button onClick={() => setWeekOffset((o) => o + 1)} className="btn-icon" title="Next week">
+          
+          <button
+            onClick={() => setRefDate(new Date())}
+            className="text-[10px] font-bold text-brand-300 bg-brand-500/10
+                       border border-brand-500/25 px-2 py-1 rounded-lg
+                       hover:bg-brand-500/20 transition-all duration-150"
+          >
+            Today
+          </button>
+          
+          <button onClick={() => setRefDate(d => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))} className="btn-icon" title="Next week">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

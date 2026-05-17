@@ -287,6 +287,8 @@ export default function App() {
           saving={schedSaving}
           onSetShift={handleSetShift}
           onClearShift={handleClearShift}
+          selYear={selYear}
+          selMonth={selMonth}
         />
 
         {/* OT Entry Form */}
