@@ -37,6 +37,7 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
   const todayKey  = toKey(today);
 
   const [pickerDay,   setPickerDay]   = useState(null);
+  const [viewDay,     setViewDay]     = useState(null);
   const [weekOffset,  setWeekOffset]  = useState(0);
 
   const displayDates = useMemo(() => {
@@ -110,7 +111,10 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
           return (
             <button
               key={key}
-              onClick={() => setPickerDay(key)}
+              onClick={() => {
+                if (shift) setViewDay(key);
+                else setPickerDay(key);
+              }}
               className={`
                 flex flex-col items-center shrink-0 snap-start
                 w-[calc((100%-6*0.5rem)/7)] min-w-[44px] max-w-[64px]
@@ -157,7 +161,73 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
           onClose={() => setPickerDay(null)}
         />
       )}
+
+      {/* Shift viewer */}
+      {viewDay && (
+        <ShiftViewer
+          dateKey={viewDay}
+          shift={schedule[viewDay]}
+          onEdit={() => { setPickerDay(viewDay); setViewDay(null); }}
+          onClose={() => setViewDay(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Shift viewer bottom sheet ─────────────────────────────────────────────────
+function ShiftViewer({ dateKey, shift, onEdit, onClose }) {
+  const dateObj = useMemo(() => {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }, [dateKey]);
+
+  const label = dateObj.toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+
+  const colors = SHIFT_COLORS[shift] || { bg: 'bg-dark-700/50', text: 'text-white', border: 'border-dark-600' };
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 bg-dark-900/70 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center animate-slide-up"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="w-full max-w-sm bg-dark-800 border border-dark-600 rounded-t-3xl shadow-2xl overflow-hidden">
+          
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 bg-dark-500 rounded-full" />
+          </div>
+          <div className="flex items-center justify-between px-5 py-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-dark-400 font-semibold mb-0.5">Shift Details</p>
+              <p className="text-sm font-bold text-white">{label}</p>
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-dark-300 hover:text-white hover:bg-dark-600 transition-all duration-150">
+              ✕
+            </button>
+          </div>
+
+          <div className="px-5 pb-5 pt-2">
+            <div className={`p-5 rounded-2xl border mb-5 flex items-center justify-center text-center ${colors.bg} ${colors.border}`}>
+              <p className={`text-lg font-extrabold ${colors.text}`}>{shift}</p>
+            </div>
+            
+            <button
+              onClick={onEdit}
+              className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 transition-all duration-150 shadow-lg shadow-brand-500/25"
+            >
+              Edit Shift
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </>
   );
 }
 
