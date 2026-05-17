@@ -253,6 +253,7 @@ export default function App() {
           onSaved={handleSaved}
           editRecord={editRecord}
           onCancelEdit={() => setEditRecord(null)}
+          schedule={schedule}
         />
 
         {/* History */}

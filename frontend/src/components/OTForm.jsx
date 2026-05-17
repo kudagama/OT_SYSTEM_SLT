@@ -68,7 +68,7 @@ function getShiftDurationHours(shiftType) {
   return (e - s) / 60;
 }
 
-export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
+export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {} }) {
   const [form, setForm]       = useState(EMPTY_FORM);
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
@@ -90,6 +90,20 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
   }, [editRecord]);
 
   const isEditing = Boolean(editRecord);
+
+  // Auto-fill shiftType from weekly schedule when date is picked (new entries only)
+  useEffect(() => {
+    if (isEditing) return;                    // don't override when editing
+    if (!form.date || !schedule) return;
+    const scheduled = schedule[form.date];    // "YYYY-MM-DD" key
+    if (scheduled) {
+      setForm((f) => ({ ...f, shiftType: scheduled, _autoFilledShift: true }));
+    } else {
+      // Clear auto-filled flag if date has no schedule entry
+      setForm((f) => ({ ...f, _autoFilledShift: false }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.date, schedule]);
 
   // Auto-recalc otHours whenever start/end time changes
   const recalcHours = useCallback((start, end) => {
@@ -234,9 +248,18 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
 
         {/* Shift Type */}
         <div>
-          <label htmlFor="ot-shift" className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
-            Shift Type *
-          </label>
+          <div className="flex items-center gap-2 mb-1.5">
+            <label htmlFor="ot-shift" className="text-xs font-semibold text-dark-200 uppercase tracking-wide">
+              Shift Type *
+            </label>
+            {form._autoFilledShift && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-300
+                               bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full
+                               animate-fade-in">
+                📅 From My Week
+              </span>
+            )}
+          </div>
           <select
             id="ot-shift"
             name="shiftType"
