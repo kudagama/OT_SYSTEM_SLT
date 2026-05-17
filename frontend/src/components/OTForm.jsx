@@ -12,18 +12,40 @@ const EMPTY_FORM = {
 };
 
 /**
- * Calculate hours between two HH:MM strings.
- * Handles overnight spans (e.g. 22:00 → 02:00 = 4h).
+ * OT Calculation Rules:
+ *  1. Minimum 1 hour  — if total time < 60 min, payable OT = 0 (not eligible).
+ *  2. First full hour is always counted as 1.0 h.
+ *  3. Remaining minutes after the 1st hour are floored to the nearest 15-min
+ *     interval: 0–14 min → +0h | 15–29 min → +0.25h | 30–44 min → +0.5h | 45–59 min → +0.75h
+ *
+ * Returns { hours, totalMins, eligible, remainderMins, roundedRemainder }
  */
-function calcHours(start, end) {
-  if (!start || !end) return '';
+function calcOT(start, end) {
+  if (!start || !end) return null;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   let startMins = sh * 60 + sm;
   let endMins   = eh * 60 + em;
   if (endMins <= startMins) endMins += 24 * 60; // overnight
-  const diff = (endMins - startMins) / 60;
-  return Math.round(diff * 100) / 100; // round to 2dp
+  const totalMins = endMins - startMins;
+
+  // Rule 1: minimum 1 hour
+  if (totalMins < 60) {
+    return { hours: 0, totalMins, eligible: false, remainderMins: 0, roundedRemainder: 0 };
+  }
+
+  // Rule 2 & 3: 1 guaranteed hour + floor remainder to nearest 15
+  const remainderMins    = totalMins - 60;
+  const roundedRemainder = Math.floor(remainderMins / 15) * 15; // floor to nearest 15
+  const hours            = 1 + roundedRemainder / 60;
+
+  return { hours, totalMins, eligible: true, remainderMins, roundedRemainder };
+}
+
+/** Legacy thin wrapper used for backward-compat (returns numeric hours or '') */
+function calcHours(start, end) {
+  const r = calcOT(start, end);
+  return r === null ? '' : r.hours;
 }
 
 export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
@@ -51,9 +73,9 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
 
   // Auto-recalc otHours whenever start/end time changes
   const recalcHours = useCallback((start, end) => {
-    const computed = calcHours(start, end);
-    if (computed !== '') {
-      setForm((f) => ({ ...f, otHours: computed }));
+    const result = calcOT(start, end);
+    if (result !== null) {
+      setForm((f) => ({ ...f, otHours: result.hours, _otResult: result }));
       if (errors.otHours) setErrors((e) => ({ ...e, otHours: undefined }));
     }
   }, [errors.otHours]);
@@ -63,7 +85,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
     if (!form.date)      e.date = 'Date is required.';
     if (!form.shiftType) e.shiftType = 'Please select a shift type.';
     if (form.otStartTime && form.otEndTime) {
-      // times provided — otHours will be auto-calculated, skip manual check
+      // times provided — auto-calculated; ineligible (< 1h) entries saved with 0 hours
     } else if (form.otHours === '' || form.otHours === null) {
       e.otHours = 'Enter OT hours manually or pick a start & end time.';
     } else if (parseFloat(form.otHours) < 0) {
@@ -122,7 +144,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
   }
 
   // derived display for auto-calculated hours
-  const autoCalced = form.otStartTime && form.otEndTime && form.otHours !== '';
+  const autoCalced  = form.otStartTime && form.otEndTime && form.otHours !== '';
+  const otResult    = form._otResult || null;
 
   return (
     <div className="glass-card p-5 animate-slide-up relative">
@@ -227,14 +250,44 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
           </div>
 
           {/* Auto-calc indicator */}
-          {autoCalced && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-400 animate-fade-in">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Auto-calculated: <span className="font-bold">{form.otHours}h</span>
+          {autoCalced && otResult && (
+            <div className="mt-2 animate-fade-in space-y-1">
+              {/* Overnight badge */}
               {form.otEndTime < form.otStartTime && (
-                <span className="text-amber-400 ml-1">(overnight)</span>
+                <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  🌙 Overnight
+                </span>
+              )}
+
+              {otResult.eligible ? (
+                /* Eligible — show breakdown */
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-3 py-2 text-xs text-emerald-300 space-y-0.5">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Payable OT: <span className="text-emerald-200 font-bold">{form.otHours}h</span>
+                  </div>
+                  <div className="text-emerald-400/80 pl-5">
+                    1h base + {otResult.roundedRemainder}min
+                    {otResult.remainderMins !== otResult.roundedRemainder && (
+                      <span className="text-amber-400/80 ml-1">
+                        (rounded ↓ from {otResult.remainderMins}min)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Ineligible — less than 1 hour */
+                <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2 text-xs text-red-300 space-y-0.5">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Not eligible — total {otResult.totalMins}min &lt; 1 hour minimum
+                  </div>
+                  <div className="text-red-400/80 pl-5">Payable OT: 0h</div>
+                </div>
               )}
             </div>
           )}

@@ -1,7 +1,7 @@
 export const SHIFT_TYPES = [
   '8:00 AM - 4:00 PM',
   '9:00 AM - 5:00 PM',
-  '3:00 PM - 11:00 PM',
+  '2:00 PM - 10:00 PM',
   '4:00 PM - 8:00 AM',
   '7:00 AM - 3:00 PM',
   'Off',
@@ -11,7 +11,7 @@ export const SHIFT_TYPES = [
 export const SHIFT_COLORS = {
   '8:00 AM - 4:00 PM':  { bg: 'bg-sky-500/15',    text: 'text-sky-300',    border: 'border-sky-500/30' },
   '9:00 AM - 5:00 PM':  { bg: 'bg-teal-500/15',   text: 'text-teal-300',   border: 'border-teal-500/30' },
-  '3:00 PM - 11:00 PM': { bg: 'bg-orange-500/15', text: 'text-orange-300', border: 'border-orange-500/30' },
+  '2:00 PM - 10:00 PM': { bg: 'bg-orange-500/15', text: 'text-orange-300', border: 'border-orange-500/30' },
   '4:00 PM - 8:00 AM':  { bg: 'bg-purple-500/15', text: 'text-purple-300', border: 'border-purple-500/30' },
   '7:00 AM - 3:00 PM':  { bg: 'bg-green-500/15',  text: 'text-green-300',  border: 'border-green-500/30' },
   'Off':                 { bg: 'bg-slate-500/15',  text: 'text-slate-300',  border: 'border-slate-500/30' },
