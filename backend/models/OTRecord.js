@@ -6,7 +6,8 @@ const SHIFT_TYPES = [
   '2:00 PM - 10:00 PM',
   '4:00 PM - 8:00 AM',
   '7:00 AM - 3:00 PM',
-  'Off',
+  '1st Off',
+  '2nd Off',
   'Night Off',
 ];
 
