@@ -72,7 +72,7 @@ router.get('/stats', async (req, res) => {
     const monthEnd     = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
 
     const [totalUsers, totalOT, monthOT] = await Promise.all([
-      User.countDocuments({ role: 'user' }),
+      User.countDocuments({ role: { $ne: 'admin' } }),
       OTRecord.aggregate([{ $group: { _id: null, total: { $sum: '$otHours' } } }]),
       OTRecord.aggregate([
         { $match: { date: { $gte: monthStart, $lt: monthEnd } } },

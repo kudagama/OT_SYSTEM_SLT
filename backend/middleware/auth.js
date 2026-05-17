@@ -12,8 +12,8 @@ module.exports = async function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Attach minimal user info to request
-    req.user = { id: decoded.id, name: decoded.name, email: decoded.email };
+    // Attach user info to request (role required for admin middleware)
+    req.user = { id: decoded.id, name: decoded.name, email: decoded.email, employeeId: decoded.employeeId, role: decoded.role || 'user' };
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token. Please log in again.' });
