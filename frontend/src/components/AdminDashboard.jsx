@@ -92,7 +92,7 @@ export default function AdminDashboard({ adminUser, onLogout }) {
             </div>
             <div>
               <h1 className="text-sm font-bold text-white tracking-tight leading-none">Admin Panel</h1>
-              <p className="text-[10px] text-amber-400 leading-none mt-0.5">OT Tracker</p>
+              <p className="text-[10px] text-amber-400 leading-none mt-0.5">WorkTrack</p>
             </div>
           </div>
 

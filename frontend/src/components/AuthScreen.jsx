@@ -64,10 +64,10 @@ export default function AuthScreen({ onAuth }) {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-brand-500/40 mb-4">
-            <span className="text-white text-2xl font-extrabold">OT</span>
+            <span className="text-white text-2xl font-extrabold">WT</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">OT Tracker</h1>
-          <p className="text-sm text-dark-300 mt-1">Personal overtime log</p>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">WorkTrack</h1>
+          <p className="text-sm text-dark-300 mt-1">Personal shift & overtime log</p>
         </div>
 
         {/* Card */}

@@ -192,7 +192,7 @@ export default function App() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600
                           flex items-center justify-center shadow-2xl shadow-brand-500/40">
-            <span className="text-white text-xl font-extrabold">OT</span>
+            <span className="text-white text-xl font-extrabold">WT</span>
           </div>
           <svg className="w-5 h-5 animate-spin text-brand-400" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
@@ -226,10 +226,10 @@ export default function App() {
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
-              <span className="text-white text-xs font-extrabold">OT</span>
+              <span className="text-white text-xs font-extrabold">WT</span>
             </div>
             <div>
-              <h1 className="text-sm font-bold text-white tracking-tight leading-none">OT Tracker</h1>
+              <h1 className="text-sm font-bold text-white tracking-tight leading-none">WorkTrack</h1>
               <p className="text-[10px] text-dark-400 leading-none mt-0.5">{user.name}</p>
             </div>
           </div>
@@ -311,7 +311,7 @@ export default function App() {
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="fixed bottom-0 left-0 right-0 bg-dark-900/90 backdrop-blur-md border-t border-dark-700 text-center"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: '0.5rem' }}>
-        <p className="text-xs text-dark-400 pb-1">OT Tracker · {user.name}'s records</p>
+        <p className="text-xs text-dark-400 pb-1">WorkTrack · {user.name}'s records</p>
       </footer>
 
       {/* ── Profile Modal ────────────────────────────────────────────────── */}
