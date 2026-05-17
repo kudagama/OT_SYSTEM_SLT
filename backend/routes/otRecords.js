@@ -8,8 +8,10 @@ router.use(authMiddleware);
 
 // ─── Helper: build monthly summary for a specific user ────────────────────────
 async function getMonthlySummary(userId, year, month) {
-  const start = new Date(year, month - 1, 1);
-  const end   = new Date(year, month, 0, 23, 59, 59, 999);
+  // Records are stored as UTC midnight (new Date("YYYY-MM-DD")).
+  // Use UTC-based boundaries to avoid timezone mismatch.
+  const start = new Date(Date.UTC(year, month - 1, 1));            // 1st of month 00:00 UTC
+  const end   = new Date(Date.UTC(year, month,     1) - 1);        // last ms of month UTC
 
   const result = await OTRecord.aggregate([
     { $match: { userId: userId, date: { $gte: start, $lte: end } } },
