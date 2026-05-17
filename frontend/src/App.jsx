@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Dashboard  from './components/Dashboard';
-import OTForm     from './components/OTForm';
-import OTHistory  from './components/OTHistory';
-import AuthScreen from './components/AuthScreen';
-import { api }    from './api';
+import Dashboard     from './components/Dashboard';
+import OTForm        from './components/OTForm';
+import OTHistory     from './components/OTHistory';
+import AuthScreen    from './components/AuthScreen';
+import ProfileModal  from './components/ProfileModal';
+import { api }       from './api';
 
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 function getStoredUser() {
@@ -18,6 +19,7 @@ export default function App() {
   const [loadingRec, setLoadingRec] = useState(true);
   const [editRecord, setEditRecord] = useState(null);
   const [error, setError]           = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   // ── Selected month (for dashboard + history filter) ──────────────────────
   const [selYear,  setSelYear]  = useState(now.getFullYear());
@@ -100,6 +102,11 @@ export default function App() {
     setError(null);
   }
 
+  function handleProfileUpdate(updatedUser) {
+    setUser(updatedUser);
+    localStorage.setItem('ot_user', JSON.stringify(updatedUser));
+  }
+
   // ── Data handlers ─────────────────────────────────────────────────────────
   const handleSaved = useCallback(() => {
     fetchRecords();           // re-fetch records — summary auto-updates via useMemo
@@ -124,6 +131,7 @@ export default function App() {
       <header className="sticky top-0 z-40 bg-dark-900/90 backdrop-blur-md border-b border-dark-700"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
               <span className="text-white text-xs font-extrabold">OT</span>
@@ -134,16 +142,25 @@ export default function App() {
             </div>
           </div>
 
+          {/* Right actions */}
           <div className="flex items-center gap-2">
+            {/* Date badge */}
             <span className="text-xs text-dark-300 bg-dark-800 border border-dark-600 px-2.5 py-1 rounded-lg">
               {now.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
             </span>
+
+            {/* Profile avatar button */}
             <button
-              onClick={handleLogout}
-              title="Sign out"
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-dark-300 hover:text-red-300 hover:bg-red-500/10 border border-dark-600 transition-all duration-150 text-sm"
+              id="header-profile-btn"
+              onClick={() => setShowProfile(true)}
+              title="View profile"
+              className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600
+                         flex items-center justify-center shadow-md shadow-brand-500/20
+                         hover:scale-105 active:scale-95 transition-all duration-150 shrink-0"
             >
-              ⏻
+              <span className="text-white text-[10px] font-extrabold leading-none">
+                {(user.name || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+              </span>
             </button>
           </div>
         </div>
@@ -201,6 +218,17 @@ export default function App() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: '0.5rem' }}>
         <p className="text-xs text-dark-400 pb-1">OT Tracker · {user.name}'s records</p>
       </footer>
+
+      {/* ── Profile Modal ────────────────────────────────────────────────── */}
+      {showProfile && (
+        <ProfileModal
+          user={user}
+          records={records}
+          onClose={() => setShowProfile(false)}
+          onLogout={() => { setShowProfile(false); handleLogout(); }}
+          onProfileUpdate={handleProfileUpdate}
+        />
+      )}
     </div>
   );
 }

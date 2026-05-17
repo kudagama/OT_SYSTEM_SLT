@@ -8,6 +8,13 @@ const UserSchema = new mongoose.Schema(
       required: [true, 'Name is required'],
       trim:     true,
     },
+    employeeId: {
+      type:      String,
+      required:  [true, 'Employee ID is required'],
+      unique:    true,
+      uppercase: true,
+      trim:      true,
+    },
     email: {
       type:      String,
       required:  [true, 'Email is required'],

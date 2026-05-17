@@ -3,7 +3,7 @@ import { api } from '../api';
 
 export default function AuthScreen({ onAuth }) {
   const [mode, setMode]       = useState('login');   // 'login' | 'register'
-  const [form, setForm]       = useState({ name: '', email: '', password: '' });
+  const [form, setForm]       = useState({ name: '', employeeId: '', email: '', password: '' });
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -17,7 +17,8 @@ export default function AuthScreen({ onAuth }) {
 
   function validate() {
     const e = {};
-    if (mode === 'register' && !form.name.trim()) e.name = 'Name is required.';
+    if (mode === 'register' && !form.name.trim())       e.name       = 'Name is required.';
+    if (mode === 'register' && !form.employeeId.trim()) e.employeeId = 'Employee ID is required.';
     if (!form.email.trim())    e.email    = 'Email is required.';
     if (!form.password.trim()) e.password = 'Password is required.';
     if (mode === 'register' && form.password.length < 6)
@@ -35,7 +36,7 @@ export default function AuthScreen({ onAuth }) {
     try {
       const res = mode === 'login'
         ? await api.login({ email: form.email, password: form.password })
-        : await api.register({ name: form.name, email: form.email, password: form.password });
+        : await api.register({ name: form.name, employeeId: form.employeeId, email: form.email, password: form.password });
 
       localStorage.setItem('ot_token', res.token);
       localStorage.setItem('ot_user',  JSON.stringify(res.user));
@@ -51,7 +52,7 @@ export default function AuthScreen({ onAuth }) {
     setMode((m) => m === 'login' ? 'register' : 'login');
     setErrors({});
     setApiError('');
-    setForm({ name: '', email: '', password: '' });
+    setForm({ name: '', employeeId: '', email: '', password: '' });
   }
 
   return (
@@ -94,13 +95,33 @@ export default function AuthScreen({ onAuth }) {
                   id="auth-name"
                   type="text"
                   name="name"
-                  placeholder="e.g. Saveen"
+                  placeholder="e.g. Saveen Kudagama"
                   autoComplete="name"
                   value={form.name}
                   onChange={handleChange}
                   className={`input-field ${errors.name ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
                 {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
+              </div>
+            )}
+
+            {/* Employee ID — register only */}
+            {mode === 'register' && (
+              <div>
+                <label htmlFor="auth-emp-id" className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
+                  Employee ID
+                </label>
+                <input
+                  id="auth-emp-id"
+                  type="text"
+                  name="employeeId"
+                  placeholder="e.g. EMP001"
+                  autoComplete="off"
+                  value={form.employeeId}
+                  onChange={handleChange}
+                  className={`input-field uppercase ${errors.employeeId ? 'border-red-500 focus:border-red-500' : ''}`}
+                />
+                {errors.employeeId && <p className="text-xs text-red-400 mt-1">{errors.employeeId}</p>}
               </div>
             )}
 

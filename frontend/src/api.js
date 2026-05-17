@@ -24,9 +24,10 @@ async function request(path, options = {}) {
 
 export const api = {
   // ── Auth ──────────────────────────────────────────────────────────────────
-  register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
-  login:    (body) => request('/auth/login',    { method: 'POST', body: JSON.stringify(body) }),
-  me:       ()     => request('/auth/me'),
+  register:      (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+  login:         (body) => request('/auth/login',    { method: 'POST', body: JSON.stringify(body) }),
+  me:            ()     => request('/auth/me'),
+  updateProfile: (body) => request('/auth/profile',  { method: 'PUT',  body: JSON.stringify(body) }),
 
   // ── OT Records ────────────────────────────────────────────────────────────
   getAll:  ()        => request('/ot'),
