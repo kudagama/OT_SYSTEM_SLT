@@ -3,8 +3,9 @@ const express  = require('express');
 const mongoose = require('mongoose');
 const cors     = require('cors');
 
-const otRoutes   = require('./routes/otRecords');
-const authRoutes = require('./routes/auth');
+const otRoutes       = require('./routes/otRecords');
+const authRoutes     = require('./routes/auth');
+const scheduleRoutes = require('./routes/schedule');
 
 const app = express();
 
@@ -46,8 +47,9 @@ app.use(async (req, res, next) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
-app.use('/api/ot',   otRoutes);
+app.use('/api/auth',     authRoutes);
+app.use('/api/ot',       otRoutes);
+app.use('/api/schedule', scheduleRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', db: mongoose.connection.readyState, timestamp: new Date().toISOString() });

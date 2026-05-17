@@ -194,7 +194,7 @@ export default function App() {
         />
 
         {/* Weekly shift schedule */}
-        <WeeklySchedule userId={user.id} />
+        <WeeklySchedule />
 
         {/* Form — only show when on current month */}
         <OTForm

@@ -37,4 +37,9 @@ export const api = {
 
   // ── Summary ───────────────────────────────────────────────────────────────
   getSummary: (year, month) => request(`/ot/summary?year=${year}&month=${month}`),
+
+  // ── Weekly Schedule ───────────────────────────────────────────────────────
+  getSchedule:       ()              => request('/schedule'),
+  setScheduleDay:    (dateKey, body) => request(`/schedule/${dateKey}`, { method: 'PUT',    body: JSON.stringify(body) }),
+  deleteScheduleDay: (dateKey)       => request(`/schedule/${dateKey}`, { method: 'DELETE' }),
 };
