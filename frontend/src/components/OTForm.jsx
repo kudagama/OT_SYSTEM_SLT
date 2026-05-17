@@ -48,6 +48,26 @@ function calcHours(start, end) {
   return r === null ? '' : r.hours;
 }
 
+/**
+ * Parse shift duration in hours from a shift-type string like "4:00 PM - 8:00 AM".
+ * Returns 0 for non-timed shifts (1st Off, 2nd Off, Night Off, etc.).
+ */
+function getShiftDurationHours(shiftType) {
+  const match = shiftType.match(/(\d+:\d+\s*[AP]M)\s*-\s*(\d+:\d+\s*[AP]M)/i);
+  if (!match) return 0;
+  const toMins = (str) => {
+    const [time, period] = str.trim().split(/\s+/);
+    let [h, m] = time.split(':').map(Number);
+    if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (period.toUpperCase() === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  };
+  let s = toMins(match[1]);
+  let e = toMins(match[2]);
+  if (e <= s) e += 1440; // overnight shift
+  return (e - s) / 60;
+}
+
 export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
   const [form, setForm]       = useState(EMPTY_FORM);
   const [errors, setErrors]   = useState({});
@@ -85,11 +105,23 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
     if (!form.date)      e.date = 'Date is required.';
     if (!form.shiftType) e.shiftType = 'Please select a shift type.';
     if (form.otStartTime && form.otEndTime) {
-      // times provided — auto-calculated; ineligible (< 1h) entries saved with 0 hours
+      // times provided — auto-calculated; ineligible (< 1h) saved as 0 hours
+      // 24h cap: check calculated result
+      const hrs = parseFloat(form.otHours) || 0;
+      const shiftH = getShiftDurationHours(form.shiftType);
+      if (hrs + shiftH >= 24) {
+        e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
+      }
     } else if (form.otHours === '' || form.otHours === null) {
       e.otHours = 'Enter OT hours manually or pick a start & end time.';
-    } else if (parseFloat(form.otHours) < 0) {
-      e.otHours = 'OT hours cannot be negative.';
+    } else {
+      const hrs     = parseFloat(form.otHours);
+      const shiftH  = getShiftDurationHours(form.shiftType);
+      if (hrs < 0) {
+        e.otHours = 'OT hours cannot be negative.';
+      } else if (hrs + shiftH >= 24) {
+        e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
+      }
     }
     return e;
   }
@@ -144,8 +176,11 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
   }
 
   // derived display for auto-calculated hours
-  const autoCalced  = form.otStartTime && form.otEndTime && form.otHours !== '';
-  const otResult    = form._otResult || null;
+  const shiftDuration = getShiftDurationHours(form.shiftType);
+  const maxOT         = 24 - shiftDuration;                      // hard ceiling
+  const autoCalced    = form.otStartTime && form.otEndTime && form.otHours !== '';
+  const otResult      = form._otResult || null;
+  const otExceeds24   = autoCalced && otResult && (parseFloat(form.otHours) + shiftDuration) >= 24;
 
   return (
     <div className="glass-card p-5 animate-slide-up relative">
@@ -259,7 +294,20 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
                 </span>
               )}
 
-              {otResult.eligible ? (
+              {/* 24h exceeded warning — takes priority */}
+              {otExceeds24 ? (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2 text-xs text-red-300 space-y-0.5">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Exceeds 24h limit!
+                  </div>
+                  <div className="text-red-400/80 pl-5">
+                    Shift {shiftDuration}h + OT {form.otHours}h = {shiftDuration + parseFloat(form.otHours)}h &mdash; max OT is <strong>{maxOT}h</strong>
+                  </div>
+                </div>
+              ) : otResult.eligible ? (
                 /* Eligible — show breakdown */
                 <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-3 py-2 text-xs text-emerald-300 space-y-0.5">
                   <div className="flex items-center gap-1.5 font-semibold">
@@ -297,19 +345,30 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit }) {
         <div>
           <label htmlFor="ot-hours" className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
             OT Hours *
-            <span className="normal-case text-dark-400 ml-1">{autoCalced ? '(auto-filled, edit if needed)' : '(enter manually)'}</span>
+            <span className="normal-case text-dark-400 ml-1">
+              {autoCalced ? '(auto-filled, edit if needed)' : '(enter manually)'}
+            </span>
+            <span className="normal-case text-amber-400/80 ml-2 font-normal">max {maxOT}h</span>
           </label>
           <input
             id="ot-hours"
             type="number"
             name="otHours"
             min="0"
-            step="0.5"
-            placeholder="e.g. 2.5"
+            max={maxOT}
+            step="0.25"
+            placeholder={`0 – ${maxOT}h`}
             value={form.otHours}
             onChange={handleChange}
-            className={`input-field ${errors.otHours ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}
-              ${autoCalced ? 'border-emerald-500/40 focus:border-emerald-500 focus:ring-emerald-500/20' : ''}`}
+            className={`input-field ${
+              errors.otHours
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                : otExceeds24
+                  ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/20'
+                  : autoCalced
+                    ? 'border-emerald-500/40 focus:border-emerald-500 focus:ring-emerald-500/20'
+                    : ''
+            }`}
           />
           {errors.otHours && <p className="text-xs text-red-400 mt-1">{errors.otHours}</p>}
         </div>

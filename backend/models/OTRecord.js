@@ -44,7 +44,8 @@ const OTRecordSchema = new mongoose.Schema(
     otHours: {
       type: Number,
       required: [true, 'OT hours are required'],
-      min: [0, 'OT hours cannot be negative'],
+      min: [0,     'OT hours cannot be negative'],
+      max: [23.75, 'OT hours cannot reach or exceed 24h (shift + OT must be < 24h)'],
     },
     notes: {
       type: String,
