@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
+import { getShiftDurationHours } from '../constants';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -258,6 +259,13 @@ function EmployeeDetail({ user, records, allRecords, loading, filterYear, filter
     [records]
   );
 
+  // Month shift hours + full working hours
+  const monthShiftHours = useMemo(
+    () => records.reduce((sum, r) => sum + getShiftDurationHours(r.shiftType), 0),
+    [records]
+  );
+  const monthTotalWorkingHours = monthOTHours + monthShiftHours;
+
   // Available months that have records
   const availableMonths = useMemo(() => {
     const set = new Set();
@@ -298,44 +306,51 @@ function EmployeeDetail({ user, records, allRecords, loading, filterYear, filter
 
       {/* All-time mini stats */}
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500">
+        <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500 flex flex-col justify-between">
           <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-0.5">Total OT</p>
-          <p className="text-base font-extrabold text-brand-300 leading-none">
-            {fmt(user.totalOTHours)}
-            <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
-          </p>
-          <p className="text-[10px] text-dark-500">{user.totalEntries} days</p>
+          <div>
+            <p className="text-base font-extrabold text-brand-300 leading-none">
+              {fmt(user.totalOTHours)}
+              <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
+            </p>
+            <p className="text-[10px] text-dark-500 mt-1">{user.totalEntries} days</p>
+          </div>
         </div>
         <div className="bg-dark-700/50 rounded-xl p-2.5 border border-dark-500">
-          <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-0.5">This Month OT</p>
-          <p className="text-base font-extrabold text-teal-300 leading-none">
-            {fmt(monthOTHours)}
-            <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
-          </p>
-          <p className="text-[10px] text-dark-500">{monthRecords.length} days</p>
+          <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">This Month Summary</p>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+            <div>
+              <p className="text-base font-extrabold text-teal-300 leading-none">
+                {fmt(monthOTHours)}<span className="text-[9px] font-medium text-dark-400 ml-0.5">h</span>
+              </p>
+              <p className="text-[9px] text-dark-500">OT</p>
+            </div>
+            <div>
+              <p className="text-base font-extrabold text-amber-300 leading-none">
+                {fmt(monthShiftHours)}<span className="text-[9px] font-medium text-dark-400 ml-0.5">h</span>
+              </p>
+              <p className="text-[9px] text-dark-500">Shift</p>
+            </div>
+            <div className="col-span-2 pt-1.5 border-t border-dark-600">
+              <p className="text-[10px] font-medium text-white flex justify-between">
+                <span>Total Work:</span>
+                <span className="font-bold text-brand-300">{fmt(monthTotalWorkingHours)} hrs</span>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 2nd Off stats — only if any */}
-      {(user.secondOffEntries > 0 || monthSecondOff.length > 0) && (
-        <div className="flex gap-2 mb-3">
-          {/* All-time 2nd Off */}
-          <div className="flex-1 bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5">
-            <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">All-Time 2nd Off OT</p>
-            <p className="text-base font-extrabold text-cyan-300 leading-none">
-              {fmt(user.secondOffHours)}
-              <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
-            </p>
-            <p className="text-[10px] text-cyan-500">{user.secondOffEntries} occurrences</p>
-          </div>
-          {/* This month 2nd Off */}
-          <div className="flex-1 bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5">
-            <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">This Month 2nd Off</p>
+      {/* This month 2nd Off stats — only if any */}
+      {monthSecondOff.length > 0 && (
+        <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5 mb-3">
+          <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">This Month 2nd Off OT</p>
+          <div className="flex items-end gap-2">
             <p className="text-base font-extrabold text-cyan-300 leading-none">
               {fmt(monthSecondOff.reduce((s, r) => s + (r.otHours || 0), 0))}
               <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
             </p>
-            <p className="text-[10px] text-cyan-500">{monthSecondOff.length} occurrences</p>
+            <p className="text-[10px] text-cyan-500 mb-0.5">{monthSecondOff.length} occurrences</p>
           </div>
         </div>
       )}

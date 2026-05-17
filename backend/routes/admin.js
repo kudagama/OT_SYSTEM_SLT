@@ -75,11 +75,18 @@ router.get('/stats', async (req, res) => {
     const monthStart   = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
     const monthEnd     = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
 
+    // Fetch IDs of all normal employees so we exclude admin OT and deleted user OT
+    const employees = await User.find({ role: { $ne: 'admin' } }).select('_id');
+    const employeeIds = employees.map(e => e._id); // Must remain ObjectIds for $match
+
     const [totalUsers, totalOT, monthOT] = await Promise.all([
       User.countDocuments({ role: { $ne: 'admin' } }),
-      OTRecord.aggregate([{ $group: { _id: null, total: { $sum: '$otHours' } } }]),
       OTRecord.aggregate([
-        { $match: { date: { $gte: monthStart, $lt: monthEnd } } },
+        { $match: { userId: { $in: employeeIds } } },
+        { $group: { _id: null, total: { $sum: '$otHours' } } }
+      ]),
+      OTRecord.aggregate([
+        { $match: { date: { $gte: monthStart, $lt: monthEnd }, userId: { $in: employeeIds } } },
         { $group: { _id: '$userId', hours: { $sum: '$otHours' } } },
       ]),
     ]);
