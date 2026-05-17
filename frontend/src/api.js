@@ -44,7 +44,8 @@ export const api = {
   deleteScheduleDay: (dateKey)       => request(`/schedule/${dateKey}`, { method: 'DELETE' }),
 
   // ── Admin ─────────────────────────────────────────────────────────────────
-  adminStats:       ()      => request('/admin/stats'),
-  adminUsers:       ()      => request('/admin/users'),
-  adminUserRecords: (id)    => request(`/admin/users/${id}/records`),
+  adminStats:        ()      => request('/admin/stats'),
+  adminUsers:        ()      => request('/admin/users'),
+  adminUserRecords:  (id)    => request(`/admin/users/${id}/records`),
+  adminUserSchedule: (id)    => request(`/admin/users/${id}/schedule`),
 };

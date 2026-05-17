@@ -26,6 +26,7 @@ export default function AdminDashboard({ adminUser, onLogout }) {
   const [search,      setSearch]      = useState('');
   const [selected,    setSelected]    = useState(null);  // selected user object
   const [userRecords, setUserRecords] = useState([]);
+  const [userSchedule,setUserSchedule]= useState({});    // employee schedule
   const [recLoading,  setRecLoading]  = useState(false);
   const [filterYear,  setFilterYear]  = useState(new Date().getFullYear());
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
@@ -42,13 +43,22 @@ export default function AdminDashboard({ adminUser, onLogout }) {
     })();
   }, []);
 
-  // ── Load records when employee selected ──────────────────────────────────
+  // ── Load records & schedule when employee selected ─────────────────────────
   useEffect(() => {
     if (!selected) return;
     setRecLoading(true);
-    api.adminUserRecords(selected.id)
-      .then((r) => setUserRecords(r.data || []))
-      .catch(() => setUserRecords([]))
+    Promise.all([
+      api.adminUserRecords(selected.id),
+      api.adminUserSchedule(selected.id)
+    ])
+      .then(([r, s]) => {
+        setUserRecords(r.data || []);
+        setUserSchedule(s.data || {});
+      })
+      .catch(() => {
+        setUserRecords([]);
+        setUserSchedule({});
+      })
       .finally(() => setRecLoading(false));
   }, [selected]);
 
@@ -219,6 +229,7 @@ export default function AdminDashboard({ adminUser, onLogout }) {
             user={selected}
             records={monthRecords}
             allRecords={userRecords}
+            schedule={userSchedule}
             loading={recLoading}
             filterYear={filterYear}
             filterMonth={filterMonth}
@@ -247,7 +258,7 @@ function StatCard({ label, value, unit, color }) {
 }
 
 // ── Employee detail ───────────────────────────────────────────────────────────
-function EmployeeDetail({ user, records, allRecords, loading, filterYear, filterMonth,
+function EmployeeDetail({ user, records, allRecords, schedule, loading, filterYear, filterMonth,
   onYearChange, onMonthChange, monthOTHours, onClose }) {
 
   const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -260,10 +271,16 @@ function EmployeeDetail({ user, records, allRecords, loading, filterYear, filter
   );
 
   // Month shift hours + full working hours
-  const monthShiftHours = useMemo(
-    () => records.reduce((sum, r) => sum + getShiftDurationHours(r.shiftType), 0),
-    [records]
-  );
+  const monthShiftHours = useMemo(() => {
+    let sum = 0;
+    Object.entries(schedule).forEach(([dateStr, shiftType]) => {
+      const d = new Date(dateStr);
+      if (d.getUTCFullYear() === filterYear && d.getUTCMonth() + 1 === filterMonth) {
+        sum += getShiftDurationHours(shiftType);
+      }
+    });
+    return sum;
+  }, [schedule, filterYear, filterMonth]);
   const monthTotalWorkingHours = monthOTHours + monthShiftHours;
 
   // Available months that have records

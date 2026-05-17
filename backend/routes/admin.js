@@ -67,6 +67,18 @@ router.get('/users/:id/records', async (req, res) => {
   }
 });
 
+// ─── GET /api/admin/users/:id/schedule ───────────────────────────────────────
+// Get schedule entries for a specific user
+router.get('/users/:id/schedule', async (req, res) => {
+  try {
+    const Schedule = require('../models/Schedule');
+    const schedule = await Schedule.findOne({ userId: req.params.id });
+    res.json({ success: true, data: schedule ? schedule.entries : {} });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ─── GET /api/admin/stats ─────────────────────────────────────────────────────
 // Global stats for the admin summary bar
 router.get('/stats', async (req, res) => {
