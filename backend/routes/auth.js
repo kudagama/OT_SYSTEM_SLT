@@ -5,7 +5,7 @@ const User    = require('../models/User');
 
 function signToken(user) {
   return jwt.sign(
-    { id: user._id, name: user.name, email: user.email, employeeId: user.employeeId },
+    { id: user._id, name: user.name, email: user.email, employeeId: user.employeeId, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, employeeId: user.employeeId, email: user.email },
+      user: { id: user._id, name: user.name, employeeId: user.employeeId, email: user.email, role: user.role },
     });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -71,7 +71,7 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, employeeId: user.employeeId, email: user.email },
+      user: { id: user._id, name: user.name, employeeId: user.employeeId, email: user.email, role: user.role },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -126,7 +126,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: updated._id, name: updated.name, employeeId: updated.employeeId, email: updated.email },
+      user: { id: updated._id, name: updated.name, employeeId: updated.employeeId, email: updated.email, role: updated.role },
     });
   } catch (err) {
     if (err.name === 'ValidationError') {

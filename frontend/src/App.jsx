@@ -5,6 +5,7 @@ import OTHistory       from './components/OTHistory';
 import AuthScreen      from './components/AuthScreen';
 import ProfileModal    from './components/ProfileModal';
 import WeeklySchedule  from './components/WeeklySchedule';
+import AdminDashboard  from './components/AdminDashboard';
 import { api }         from './api';
 import { getShiftDurationHours } from './constants';
 
@@ -175,6 +176,16 @@ export default function App() {
 
   // ── Not logged in ─────────────────────────────────────────────────────────
   if (!user) return <AuthScreen onAuth={handleAuth} />;
+
+  // ── Admin role → Admin Dashboard ──────────────────────────────────────────
+  if (user.role === 'admin') {
+    return (
+      <AdminDashboard
+        adminUser={user}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-dark-900">

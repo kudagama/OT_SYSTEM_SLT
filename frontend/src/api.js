@@ -42,4 +42,9 @@ export const api = {
   getSchedule:       ()              => request('/schedule'),
   setScheduleDay:    (dateKey, body) => request(`/schedule/${dateKey}`, { method: 'PUT',    body: JSON.stringify(body) }),
   deleteScheduleDay: (dateKey)       => request(`/schedule/${dateKey}`, { method: 'DELETE' }),
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  adminStats:       ()      => request('/admin/stats'),
+  adminUsers:       ()      => request('/admin/users'),
+  adminUserRecords: (id)    => request(`/admin/users/${id}/records`),
 };
