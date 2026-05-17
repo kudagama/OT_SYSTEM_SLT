@@ -52,3 +52,23 @@ export function todayISODate() {
   const dd   = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
+
+/**
+ * Parse shift duration in hours from a shift-type string like "4:00 PM - 8:00 AM".
+ * Returns 0 for non-timed shifts (1st Off, 2nd Off, Night Off, etc.).
+ */
+export function getShiftDurationHours(shiftType) {
+  const match = shiftType?.match(/(\d+:\d+\s*[AP]M)\s*-\s*(\d+:\d+\s*[AP]M)/i);
+  if (!match) return 0;
+  const toMins = (str) => {
+    const [time, period] = str.trim().split(/\s+/);
+    let [h, m] = time.split(':').map(Number);
+    if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (period.toUpperCase() === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  };
+  let s = toMins(match[1]);
+  let e = toMins(match[2]);
+  if (e <= s) e += 1440; // overnight shift
+  return (e - s) / 60;
+}

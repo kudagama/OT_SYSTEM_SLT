@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 
-const MONTH_GOAL = 100;
+const OT_GOAL = 100; // monthly OT hour goal for progress bar
 
-// Reusable nav icon button
 function NavBtn({ onClick, disabled, title, children }) {
   return (
     <button
@@ -17,15 +16,34 @@ function NavBtn({ onClick, disabled, title, children }) {
   );
 }
 
+// Mini stat tile
+function StatTile({ label, value, unit, color = 'text-white', accent }) {
+  return (
+    <div className={`bg-dark-700/60 rounded-xl p-3 sm:p-3.5 border border-dark-500 ${accent || ''}`}>
+      <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-1">{label}</p>
+      <p className={`text-xl sm:text-2xl font-extrabold tracking-tight leading-none ${color}`}>
+        {value}
+        <span className="text-xs font-medium text-dark-400 ml-1">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
 export default function Dashboard({
   summary, loading,
   selYear, selMonth, isCurrentMonth,
   onPrev, onNext, onPrevYear, onNextYear, onToday,
 }) {
-  const { totalOTHours = 0, totalEntries = 0 } = summary || {};
+  const {
+    totalOTHours    = 0,
+    totalOTDays     = 0,
+    totalShiftHours = 0,
+    totalShiftDays  = 0,
+    totalWorkingHours = 0,
+  } = summary || {};
 
   const progressPct = useMemo(
-    () => Math.min(100, Math.round((totalOTHours / MONTH_GOAL) * 100)),
+    () => Math.min(100, Math.round((totalOTHours / OT_GOAL) * 100)),
     [totalOTHours]
   );
 
@@ -42,6 +60,7 @@ export default function Dashboard({
     :                     'bg-gradient-to-r from-brand-600 to-violet-500';
 
   const atCurrentYear = selYear >= new Date().getFullYear();
+  const hasData = totalShiftDays > 0 || totalOTDays > 0;
 
   return (
     <div className="glass-card p-4 sm:p-5 animate-slide-up">
@@ -56,8 +75,6 @@ export default function Dashboard({
             {monthLabel}
           </h2>
         </div>
-
-        {/* Today pill — only when not on current month */}
         {!isCurrentMonth && (
           <button
             onClick={onToday}
@@ -70,9 +87,8 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Row 2: Navigation bar ««  ‹  [year label]  ›  »» ─────────────── */}
+      {/* ── Row 2: Navigation bar ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-1 mb-4">
-        {/* Left group: year-back + month-back */}
         <div className="flex items-center gap-1">
           <NavBtn onClick={onPrevYear} title="Previous year">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,13 +103,11 @@ export default function Dashboard({
           </NavBtn>
         </div>
 
-        {/* Centre: year pill */}
         <span className="text-xs font-bold text-dark-200 bg-dark-700 border border-dark-500
                          px-3 py-1 rounded-lg select-none">
           {selYear}
         </span>
 
-        {/* Right group: month-forward + year-forward */}
         <div className="flex items-center gap-1">
           <NavBtn onClick={onNext} disabled={isCurrentMonth}
             title={isCurrentMonth ? 'Current month' : 'Next month'}>
@@ -114,41 +128,53 @@ export default function Dashboard({
       {/* ── Stats & Progress ─────────────────────────────────────────────── */}
       {loading ? (
         <div className="space-y-3 animate-pulse">
-          <div className="h-16 bg-dark-700 rounded-xl" />
+          <div className="grid grid-cols-2 gap-2.5">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-16 bg-dark-700 rounded-xl" />)}
+          </div>
+          <div className="h-14 bg-dark-700 rounded-xl" />
           <div className="h-3 bg-dark-700 rounded-full" />
         </div>
       ) : (
         <>
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-dark-700/60 rounded-xl p-3 sm:p-4 border border-dark-500">
-              <p className="text-xs text-dark-300 mb-0.5">Total OT Hours</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                {totalOTHours.toFixed(1)}
-                <span className="text-sm font-medium text-dark-300 ml-1">hrs</span>
+          {/* ── Total Working Hours — prominent single row ─────────────── */}
+          <div className="bg-gradient-to-r from-dark-700/80 to-dark-700/40 rounded-xl p-3.5
+                          border border-dark-500 mb-2.5 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5">Total Working Hours</p>
+              <p className="text-3xl font-extrabold tracking-tight text-white leading-none">
+                {totalWorkingHours.toFixed(1)}
+                <span className="text-sm font-medium text-dark-400 ml-1">hrs</span>
               </p>
             </div>
-            <div className="bg-dark-700/60 rounded-xl p-3 sm:p-4 border border-dark-500">
-              <p className="text-xs text-dark-300 mb-0.5">Days Logged</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                {totalEntries}
-                <span className="text-sm font-medium text-dark-300 ml-1">days</span>
+            <div className="text-right">
+              <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5">Working Days</p>
+              <p className="text-2xl font-extrabold tracking-tight text-amber-300 leading-none">
+                {totalShiftDays}
+                <span className="text-xs font-medium text-dark-400 ml-1">days</span>
               </p>
             </div>
           </div>
 
-          {/* No data */}
-          {totalEntries === 0 && !isCurrentMonth && (
+          {/* ── 2×2 grid: OT + Shift breakdown ───────────────────────── */}
+          <div className="grid grid-cols-2 gap-2.5 mb-4">
+            <StatTile label="OT Hours"   value={totalOTHours.toFixed(1)} unit="hrs"  color="text-brand-300" />
+            <StatTile label="OT Days"    value={totalOTDays}             unit="days" color="text-violet-300" />
+            <StatTile label="Shift Hours" value={totalShiftHours.toFixed(1)} unit="hrs"  color="text-teal-300" />
+            <StatTile label="Shift Days"  value={totalShiftDays}             unit="days" color="text-sky-300" />
+          </div>
+
+          {/* No data message */}
+          {!hasData && !isCurrentMonth && (
             <p className="text-xs text-dark-400 text-center py-1">
-              No OT recorded for {monthLabel}.
+              No data recorded for {monthLabel}.
             </p>
           )}
 
-          {/* Progress bar */}
-          {totalEntries > 0 && (
+          {/* OT progress bar */}
+          {totalOTDays > 0 && (
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-dark-300">Goal: {MONTH_GOAL}h</span>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-xs text-dark-300">OT Goal: {OT_GOAL}h</span>
                 <span className={`text-xs font-bold
                   ${progressPct >= 100 ? 'text-emerald-400' : 'text-brand-400'}`}>
                   {progressPct}%
@@ -162,7 +188,7 @@ export default function Dashboard({
               </div>
               {progressPct >= 100 && (
                 <p className="text-xs text-emerald-400 mt-2 font-medium">
-                  🎉 Goal reached! Great work this month.
+                  🎉 OT goal reached! Great work this month.
                 </p>
               )}
             </div>

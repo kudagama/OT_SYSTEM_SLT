@@ -6,8 +6,9 @@ import AuthScreen      from './components/AuthScreen';
 import ProfileModal    from './components/ProfileModal';
 import WeeklySchedule  from './components/WeeklySchedule';
 import { api }         from './api';
+import { getShiftDurationHours } from './constants';
 
-// ── Auth helpers ─────────────────────────────────────────────────────────────
+// ── Auth helpers ──────────────────────────────────────────────────────────────
 function getStoredUser() {
   try { return JSON.parse(localStorage.getItem('ot_user')); } catch { return null; }
 }
@@ -15,16 +16,18 @@ function getStoredUser() {
 export default function App() {
   const now = new Date();
 
-  const [user, setUser]             = useState(getStoredUser);
-  const [records, setRecords]       = useState([]);
-  const [loadingRec, setLoadingRec] = useState(true);
-  const [editRecord, setEditRecord] = useState(null);
-  const [error, setError]           = useState(null);
+  const [user, setUser]               = useState(getStoredUser);
+  const [records, setRecords]         = useState([]);
+  const [schedule, setSchedule]       = useState({});   // { "YYYY-MM-DD": "shiftType" }
+  const [loadingRec, setLoadingRec]   = useState(true);
+  const [schedSaving, setSchedSaving] = useState(false);
+  const [editRecord, setEditRecord]   = useState(null);
+  const [error, setError]             = useState(null);
   const [showProfile, setShowProfile] = useState(false);
 
-  // ── Selected month (for dashboard + history filter) ──────────────────────
+  // ── Selected month ────────────────────────────────────────────────────────
   const [selYear,  setSelYear]  = useState(now.getFullYear());
-  const [selMonth, setSelMonth] = useState(now.getMonth() + 1); // 1-based
+  const [selMonth, setSelMonth] = useState(now.getMonth() + 1);
 
   const isCurrentMonth =
     selYear === now.getFullYear() && selMonth === now.getMonth() + 1;
@@ -38,18 +41,12 @@ export default function App() {
     if (selMonth === 12) { setSelYear((y) => y + 1); setSelMonth(1); }
     else                 { setSelMonth((m) => m + 1); }
   }
-  function goToPrevYear() {
-    setSelYear((y) => y - 1);
-    // No cap going back
-  }
+  function goToPrevYear() { setSelYear((y) => y - 1); }
   function goToNextYear() {
-    // Cap: don't go beyond current real month
     const nextYear = selYear + 1;
     if (nextYear > now.getFullYear()) return;
-    if (nextYear === now.getFullYear() && selMonth > now.getMonth() + 1) {
-      // clamp month to today if jumping forward would overshoot
+    if (nextYear === now.getFullYear() && selMonth > now.getMonth() + 1)
       setSelMonth(now.getMonth() + 1);
-    }
     setSelYear(nextYear);
   }
   function goToToday() {
@@ -57,7 +54,7 @@ export default function App() {
     setSelMonth(now.getMonth() + 1);
   }
 
-  // ── Fetch all records ─────────────────────────────────────────────────────
+  // ── Fetch records ─────────────────────────────────────────────────────────
   const fetchRecords = useCallback(async () => {
     setLoadingRec(true);
     try {
@@ -75,21 +72,78 @@ export default function App() {
     }
   }, []);
 
-  // ── Compute summary CLIENT-SIDE from records (always in sync, no extra API call) ──
+  // ── Fetch schedule ────────────────────────────────────────────────────────
+  const fetchSchedule = useCallback(async () => {
+    try {
+      const res = await api.getSchedule();
+      setSchedule(res.entries || {});
+    } catch { /* non-critical — summary still works from records */ }
+  }, []);
+
+  useEffect(() => {
+    if (user) { fetchRecords(); fetchSchedule(); }
+  }, [user, fetchRecords, fetchSchedule]);
+
+  // ── Schedule mutations (lifted from WeeklySchedule) ───────────────────────
+  const handleSetShift = useCallback(async (dateKey, shiftType) => {
+    setSchedule((prev) => ({ ...prev, [dateKey]: shiftType })); // optimistic
+    setSchedSaving(true);
+    try {
+      const res = await api.setScheduleDay(dateKey, { shiftType });
+      setSchedule(res.entries || {});
+    } catch {
+      setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; }); // revert
+    } finally { setSchedSaving(false); }
+  }, []);
+
+  const handleClearShift = useCallback(async (dateKey) => {
+    setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; }); // optimistic
+    setSchedSaving(true);
+    try {
+      const res = await api.deleteScheduleDay(dateKey);
+      setSchedule(res.entries || {});
+    } catch { fetchSchedule(); } // revert via refetch
+    finally  { setSchedSaving(false); }
+  }, [fetchSchedule]);
+
+  // ── Enhanced summary (records + schedule for selected month) ──────────────
   const summary = useMemo(() => {
-    const filtered = records.filter((r) => {
+    // OT records for this month
+    const monthRecords = records.filter((r) => {
       const d = new Date(r.date);
       return d.getUTCFullYear() === selYear && d.getUTCMonth() + 1 === selMonth;
     });
-    return {
-      totalOTHours: filtered.reduce((sum, r) => sum + (r.otHours || 0), 0),
-      totalEntries: filtered.length,
-    };
-  }, [records, selYear, selMonth]);
 
-  useEffect(() => {
-    if (user) fetchRecords();
-  }, [user, fetchRecords]);
+    // Schedule entries for this month (as { dateKey: shiftType })
+    const monthSchedule = Object.fromEntries(
+      Object.entries(schedule).filter(([key]) => {
+        const [y, m] = key.split('-').map(Number);
+        return y === selYear && m === selMonth;
+      })
+    );
+
+    // Merge: dayMap[dateKey] = { otHours, shiftType }
+    // OT records take priority for shiftType (authoritative)
+    const dayMap = {};
+    monthRecords.forEach((r) => {
+      const key = new Date(r.date).toISOString().split('T')[0]; // YYYY-MM-DD (UTC)
+      dayMap[key] = { otHours: r.otHours || 0, shiftType: r.shiftType };
+    });
+    // Add schedule days that have no OT record
+    Object.entries(monthSchedule).forEach(([key, shiftType]) => {
+      if (!dayMap[key]) dayMap[key] = { otHours: 0, shiftType };
+    });
+
+    const allDays = Object.values(dayMap);
+
+    const totalOTHours      = allDays.reduce((s, d) => s + d.otHours, 0);
+    const totalOTDays       = monthRecords.length;
+    const totalShiftHours   = allDays.reduce((s, d) => s + getShiftDurationHours(d.shiftType), 0);
+    const totalShiftDays    = allDays.length;                     // unique days with any activity
+    const totalWorkingHours = totalShiftHours + totalOTHours;
+
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours };
+  }, [records, schedule, selYear, selMonth]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   function handleAuth(loggedInUser) { setUser(loggedInUser); }
@@ -97,10 +151,8 @@ export default function App() {
   function handleLogout() {
     localStorage.removeItem('ot_token');
     localStorage.removeItem('ot_user');
-    setUser(null);
-    setRecords([]);
-    setEditRecord(null);
-    setError(null);
+    setUser(null); setRecords([]); setSchedule({});
+    setEditRecord(null); setError(null);
   }
 
   function handleProfileUpdate(updatedUser) {
@@ -110,17 +162,15 @@ export default function App() {
 
   // ── Data handlers ─────────────────────────────────────────────────────────
   const handleSaved = useCallback(() => {
-    fetchRecords();           // re-fetch records — summary auto-updates via useMemo
+    fetchRecords();
     setEditRecord(null);
   }, [fetchRecords]);
 
   const handleDelete = useCallback(async (id) => {
     try {
       await api.remove(id);
-      setRecords((prev) => prev.filter((r) => r._id !== id)); // optimistic — summary auto-updates
-    } catch (err) {
-      setError(err.message);
-    }
+      setRecords((prev) => prev.filter((r) => r._id !== id));
+    } catch (err) { setError(err.message); }
   }, []);
 
   // ── Not logged in ─────────────────────────────────────────────────────────
@@ -145,12 +195,9 @@ export default function App() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            {/* Date badge */}
             <span className="text-xs text-dark-300 bg-dark-800 border border-dark-600 px-2.5 py-1 rounded-lg">
               {now.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
             </span>
-
-            {/* Profile avatar button */}
             <button
               id="header-profile-btn"
               onClick={() => setShowProfile(true)}
@@ -193,26 +240,28 @@ export default function App() {
           onToday={goToToday}
         />
 
-        {/* Weekly shift schedule */}
-        <WeeklySchedule />
+        {/* Weekly shift schedule — fully controlled by App */}
+        <WeeklySchedule
+          schedule={schedule}
+          saving={schedSaving}
+          onSetShift={handleSetShift}
+          onClearShift={handleClearShift}
+        />
 
-        {/* Form — only show when on current month */}
+        {/* OT Entry Form */}
         <OTForm
           onSaved={handleSaved}
           editRecord={editRecord}
           onCancelEdit={() => setEditRecord(null)}
         />
 
-        {/* History — filtered to selected month */}
+        {/* History */}
         <OTHistory
           records={records}
           loading={loadingRec}
           filterYear={selYear}
           filterMonth={selMonth}
-          onEdit={(record) => {
-            setEditRecord(record);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          onEdit={(record) => { setEditRecord(record); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           onDelete={handleDelete}
         />
       </main>
