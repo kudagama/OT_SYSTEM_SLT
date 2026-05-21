@@ -1,9 +1,10 @@
-const express        = require('express');
-const router         = express.Router();
-const User           = require('../models/User');
-const OTRecord       = require('../models/OTRecord');
-const authMiddleware = require('../middleware/auth');
-const adminMiddleware = require('../middleware/admin');
+const express          = require('express');
+const router           = express.Router();
+const User             = require('../models/User');
+const OTRecord         = require('../models/OTRecord');
+const OTAnnouncement   = require('../models/OTAnnouncement');
+const authMiddleware   = require('../middleware/auth');
+const adminMiddleware  = require('../middleware/admin');
 
 // All admin routes: must be logged in AND be admin
 router.use(authMiddleware, adminMiddleware);
@@ -110,6 +111,80 @@ router.get('/stats', async (req, res) => {
       activeThisMonth: monthOT.length,
       monthOTHours:  monthOT.reduce((s, r) => s + r.hours, 0),
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// ─── POST /api/admin/announcements ───────────────────────────────────────────
+// Create a new OT announcement broadcast to all employees
+router.post('/announcements', async (req, res) => {
+  try {
+    const { title, message, otDate, startTime, endTime, shiftType } = req.body;
+    if (!title || !otDate) {
+      return res.status(400).json({ success: false, message: 'Title and OT date are required.' });
+    }
+    const announcement = await OTAnnouncement.create({
+      title,
+      message:   message   || '',
+      otDate:    new Date(otDate),
+      startTime: startTime || '',
+      endTime:   endTime   || '',
+      shiftType: shiftType || '8:00 AM - 4:00 PM',
+      isActive:  true,
+      createdBy: req.user._id,
+    });
+    res.status(201).json({ success: true, data: announcement });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/admin/announcements ────────────────────────────────────────────
+// List all announcements (active + inactive) for admin management
+router.get('/announcements', async (req, res) => {
+  try {
+    const announcements = await OTAnnouncement.find()
+      .sort({ createdAt: -1 });
+    const data = announcements.map((a) => {
+      const obj = a.toObject();
+      obj.acceptanceCount = a.acceptances.length;
+      delete obj.acceptances; // don't send the full array to admin list
+      return obj;
+    });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── DELETE /api/admin/announcements/:id ─────────────────────────────────────
+// Deactivate (soft-delete) an announcement so employees no longer see it
+router.delete('/announcements/:id', async (req, res) => {
+  try {
+    await OTAnnouncement.findByIdAndUpdate(req.params.id, { isActive: false });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/admin/announcements/:id/acceptances ────────────────────────────
+// Returns the list of employees who accepted a specific OT announcement
+router.get('/announcements/:id/acceptances', async (req, res) => {
+  try {
+    const ann = await OTAnnouncement.findById(req.params.id)
+      .populate('acceptances.userId', 'name employeeId email');
+    if (!ann) return res.status(404).json({ success: false, message: 'Not found.' });
+
+    const list = ann.acceptances.map((a) => ({
+      name:       a.userId?.name       || '—',
+      employeeId: a.userId?.employeeId || '—',
+      email:      a.userId?.email      || '—',
+      acceptedAt: a.acceptedAt,
+    }));
+    res.json({ success: true, data: list, total: list.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

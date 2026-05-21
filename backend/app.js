@@ -1,13 +1,17 @@
 require('dotenv').config();
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 const express  = require('express');
 const mongoose = require('mongoose');
 const cors     = require('cors');
 
-const otRoutes       = require('./routes/otRecords');
-const authRoutes     = require('./routes/auth');
-const scheduleRoutes = require('./routes/schedule');
-const adminRoutes    = require('./routes/admin');
-const User           = require('./models/User');
+const otRoutes             = require('./routes/otRecords');
+const authRoutes           = require('./routes/auth');
+const scheduleRoutes       = require('./routes/schedule');
+const adminRoutes          = require('./routes/admin');
+const announcementRoutes   = require('./routes/announcements');
+const User                 = require('./models/User');
 
 const app = express();
 
@@ -49,10 +53,11 @@ app.use(async (req, res, next) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',     authRoutes);
-app.use('/api/ot',       otRoutes);
-app.use('/api/schedule', scheduleRoutes);
-app.use('/api/admin',    adminRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/ot',            otRoutes);
+app.use('/api/schedule',      scheduleRoutes);
+app.use('/api/admin',         adminRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', db: mongoose.connection.readyState, timestamp: new Date().toISOString() });

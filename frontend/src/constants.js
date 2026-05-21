@@ -7,6 +7,7 @@ export const SHIFT_TYPES = [
   '1st Off',
   '2nd Off',
   'Night Off',
+  'Custom',
 ];
 
 export const SHIFT_COLORS = {
@@ -18,6 +19,7 @@ export const SHIFT_COLORS = {
   '1st Off':             { bg: 'bg-slate-500/15',  text: 'text-slate-300',  border: 'border-slate-500/30' },
   '2nd Off':             { bg: 'bg-cyan-500/15',   text: 'text-cyan-300',   border: 'border-cyan-500/30' },
   'Night Off':           { bg: 'bg-indigo-500/15', text: 'text-indigo-300', border: 'border-indigo-500/30' },
+  'Custom':              { bg: 'bg-pink-500/15',   text: 'text-pink-300',   border: 'border-pink-500/30' },
 };
 
 /**

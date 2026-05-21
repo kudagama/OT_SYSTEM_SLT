@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Dashboard       from './components/Dashboard';
-import OTForm          from './components/OTForm';
-import OTHistory       from './components/OTHistory';
-import AuthScreen      from './components/AuthScreen';
-import ProfileModal    from './components/ProfileModal';
-import WeeklySchedule  from './components/WeeklySchedule';
-import AdminDashboard  from './components/AdminDashboard';
-import { api }         from './api';
+import Dashboard              from './components/Dashboard';
+import OTForm                 from './components/OTForm';
+import OTHistory              from './components/OTHistory';
+import AuthScreen             from './components/AuthScreen';
+import ProfileModal           from './components/ProfileModal';
+import WeeklySchedule         from './components/WeeklySchedule';
+import AdminDashboard         from './components/AdminDashboard';
+import OTAnnouncementPopup    from './components/OTAnnouncementPopup';
+import OTAnnouncementsSection from './components/OTAnnouncementsSection';
+import { api }                from './api';
 import { getShiftDurationHours } from './constants';
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -26,7 +28,9 @@ export default function App() {
   const [schedSaving, setSchedSaving] = useState(false);
   const [editRecord, setEditRecord]   = useState(null);
   const [error, setError]             = useState(null);
+  const [annError, setAnnError]       = useState(null); // DEBUG for announcements
   const [showProfile, setShowProfile] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
 
   // ── Selected month ────────────────────────────────────────────────────────
   const [selYear,  setSelYear]  = useState(now.getFullYear());
@@ -95,7 +99,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user) { fetchRecords(); fetchSchedule(); }
+    let interval;
+    if (user && user.role !== 'admin') {
+      fetchRecords();
+      fetchSchedule();
+      
+      const fetchAnnouncements = () => {
+        api.getActiveAnnouncements()
+          .then((res) => setAnnouncements(res.data || []))
+          .catch((err) => {
+            console.error("Announcements fetch error:", err);
+            setAnnError(err.message);
+          });
+      };
+
+      // Initial fetch
+      fetchAnnouncements();
+
+      // Poll every 10 seconds for real-time updates (e.g. when someone else accepts a slot)
+      interval = setInterval(fetchAnnouncements, 10000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [user, fetchRecords, fetchSchedule]);
 
   // ── Schedule mutations (lifted from WeeklySchedule) ───────────────────────
@@ -281,6 +308,13 @@ export default function App() {
           onToday={goToToday}
         />
 
+        {/* OT Announcements Section — shown when active slots exist */}
+        <OTAnnouncementsSection
+          announcements={announcements}
+          onAnnouncementsChange={setAnnouncements}
+          userSchedule={schedule}
+        />
+
         {/* Weekly shift schedule — fully controlled by App */}
         <WeeklySchedule
           schedule={schedule}
@@ -326,6 +360,8 @@ export default function App() {
           onProfileUpdate={handleProfileUpdate}
         />
       )}
+      {/* ── OT Announcement Popup (employees only) ──────────────────────── */}
+      <OTAnnouncementPopup announcements={announcements} />
     </div>
   );
 }

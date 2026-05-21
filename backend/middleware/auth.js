@@ -21,6 +21,7 @@ module.exports = async function authMiddleware(req, res, next) {
 
     req.user = {
       id:         decoded.id,
+      _id:        dbUser._id, // added for mongoose references
       name:       dbUser.name,
       email:      dbUser.email,
       employeeId: dbUser.employeeId,

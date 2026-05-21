@@ -9,6 +9,7 @@ const SHIFT_TYPES = [
   '1st Off',
   '2nd Off',
   'Night Off',
+  'Custom',
 ];
 
 const OTRecordSchema = new mongoose.Schema(

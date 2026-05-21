@@ -20,28 +20,81 @@ function relativeDate(dateStr) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard({ adminUser, onLogout }) {
-  const [stats,       setStats]       = useState(null);
-  const [users,       setUsers]       = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState('');
-  const [selected,    setSelected]    = useState(null);  // selected user object
-  const [userRecords, setUserRecords] = useState([]);
-  const [userSchedule,setUserSchedule]= useState({});    // employee schedule
-  const [recLoading,  setRecLoading]  = useState(false);
-  const [filterYear,  setFilterYear]  = useState(new Date().getFullYear());
-  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+  const [stats,        setStats]        = useState(null);
+  const [users,        setUsers]         = useState([]);
+  const [loading,      setLoading]       = useState(true);
+  const [search,       setSearch]        = useState('');
+  const [selected,     setSelected]      = useState(null);  // selected user object
+  const [userRecords,  setUserRecords]   = useState([]);
+  const [userSchedule, setUserSchedule]  = useState({});    // employee schedule
+  const [recLoading,   setRecLoading]    = useState(false);
+  const [filterYear,   setFilterYear]    = useState(new Date().getFullYear());
+  const [filterMonth,  setFilterMonth]   = useState(new Date().getMonth() + 1);
+
+  // ── Announcements state ───────────────────────────────────────────────────
+  const [announcements,   setAnnouncements]  = useState([]);
+  const [showAnnForm,     setShowAnnForm]    = useState(false);
+  const [annSaving,       setAnnSaving]      = useState(false);
+  const [annForm,         setAnnForm]        = useState({ title: '', message: '', otDate: '', startTime: '', endTime: '', shiftType: '8:00 AM - 4:00 PM', timeMode: 'shift' });
+  const [annError,        setAnnError]       = useState('');
 
   // ── Load stats + users ────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [s, u] = await Promise.all([api.adminStats(), api.adminUsers()]);
+        const [s, u, a] = await Promise.all([api.adminStats(), api.adminUsers(), api.adminGetAnnouncements()]);
         setStats(s);
         setUsers(u.users || []);
+        setAnnouncements(a.data || []);
       } catch { /* ignore */ }
       finally   { setLoading(false); }
     })();
   }, []);
+
+  async function handleCreateAnnouncement(e) {
+    e.preventDefault();
+    setAnnError('');
+    if (!annForm.title || !annForm.otDate) { setAnnError('Title and OT date are required.'); return; }
+    
+    // Auto-parse shift times if in 'shift' mode
+    let payload = { ...annForm };
+    if (payload.timeMode === 'shift' && payload.shiftType !== 'Custom') {
+      const match = payload.shiftType.match(/(\d+):(\d+)\s*([AP]M)\s*-\s*(\d+):(\d+)\s*([AP]M)/i);
+      if (match) {
+        let [ , sh, sm, sAmpm, eh, em, eAmpm ] = match;
+        sh = parseInt(sh, 10);
+        eh = parseInt(eh, 10);
+        if (sAmpm.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+        if (sAmpm.toUpperCase() === 'AM' && sh === 12) sh = 0;
+        if (eAmpm.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+        if (eAmpm.toUpperCase() === 'AM' && eh === 12) eh = 0;
+        payload.startTime = `${sh.toString().padStart(2, '0')}:${sm}`;
+        payload.endTime   = `${eh.toString().padStart(2, '0')}:${em}`;
+      } else {
+        payload.startTime = '';
+        payload.endTime = '';
+      }
+    }
+
+    setAnnSaving(true);
+    try {
+      const res = await api.adminCreateAnnouncement(payload);
+      setAnnouncements((prev) => [res.data, ...prev]);
+      setAnnForm({ title: '', message: '', otDate: '', startTime: '', endTime: '', shiftType: '8:00 AM - 4:00 PM', timeMode: 'shift' });
+      setShowAnnForm(false);
+    } catch (err) {
+      setAnnError(err.message || 'Failed to post announcement.');
+    } finally {
+      setAnnSaving(false);
+    }
+  }
+
+  async function handleDeleteAnnouncement(id) {
+    try {
+      await api.adminDeleteAnnouncement(id);
+      setAnnouncements((prev) => prev.map((a) => a._id === id ? { ...a, isActive: false } : a));
+    } catch { /* ignore */ }
+  }
 
   // ── Load records & schedule when employee selected ─────────────────────────
   useEffect(() => {
@@ -139,6 +192,19 @@ export default function AdminDashboard({ adminUser, onLogout }) {
             <StatCard label="Month OT"         value={fmt(stats?.monthOTHours)}      unit="hrs"  color="text-amber-300" />
           </div>
         )}
+
+        {/* Announcements Panel */}
+        <AnnouncementsPanel
+          announcements={announcements}
+          showForm={showAnnForm}
+          onToggleForm={() => { setShowAnnForm((v) => !v); setAnnError(''); }}
+          form={annForm}
+          onFormChange={(field, val) => setAnnForm((f) => ({ ...f, [field]: val }))}
+          onSubmit={handleCreateAnnouncement}
+          onDelete={handleDeleteAnnouncement}
+          saving={annSaving}
+          error={annError}
+        />
 
         {/* Employee List Panel */}
         <div className="glass-card p-4 sm:p-5">
@@ -446,6 +512,337 @@ function EmployeeDetail({ user, records, allRecords, schedule, loading, filterYe
             <span className="text-sm font-bold text-brand-300">{fmt(monthOTHours)} hrs total</span>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Announcements Panel ───────────────────────────────────────────────────────
+function AnnouncementsPanel({ announcements, showForm, onToggleForm, form, onFormChange, onSubmit, onDelete, saving, error }) {
+  const active   = announcements.filter((a) => a.isActive);
+  const inactive = announcements.filter((a) => !a.isActive);
+
+  // Track expanded acceptances per announcement id
+  const [expandedId,   setExpandedId]   = useState(null);
+  const [acceptances,  setAcceptances]  = useState({});   // { [annId]: [] }
+  const [loadingAccId, setLoadingAccId] = useState(null);
+
+  async function toggleAcceptances(annId) {
+    if (expandedId === annId) { setExpandedId(null); return; }
+    setExpandedId(annId);
+    if (acceptances[annId]) return; // already loaded
+    setLoadingAccId(annId);
+    try {
+      const res = await api.adminGetAcceptances(annId);
+      setAcceptances((prev) => ({ ...prev, [annId]: res.data || [] }));
+    } catch { setAcceptances((prev) => ({ ...prev, [annId]: [] })); }
+    finally   { setLoadingAccId(null); }
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  function fmt12h(t) {
+    if (!t) return '';
+    const [hStr, mStr] = t.split(':');
+    let h = parseInt(hStr, 10);
+    const m = mStr || '00';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+  }
+
+  return (
+    <div className="glass-card p-4 sm:p-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📢</span>
+          <h2 className="text-sm font-bold text-white">OT Announcements</h2>
+          {active.length > 0 && (
+            <span className="text-[10px] font-bold text-violet-300 bg-violet-500/15 border border-violet-500/30
+                             px-2 py-0.5 rounded-full animate-pulse">
+              {active.length} live
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onToggleForm}
+          className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all duration-150
+            ${showForm
+              ? 'text-dark-300 bg-dark-700 border-dark-500 hover:border-dark-400'
+              : 'text-violet-300 bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20'
+            }`}
+        >
+          {showForm ? '✕ Cancel' : '+ New Announcement'}
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <form onSubmit={onSubmit} className="mb-4 p-3 rounded-xl border border-violet-500/20 bg-violet-500/5 space-y-2.5 animate-slide-up">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-1">New Special OT Announcement</p>
+
+          {error && (
+            <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
+          )}
+
+          {/* Title */}
+          <div>
+            <label className="text-[10px] text-dark-400 font-semibold block mb-1">Title *</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => onFormChange('title', e.target.value)}
+              placeholder="e.g. Special OT Available – This Saturday!"
+              className="input-field text-sm"
+              required
+            />
+          </div>
+
+          {/* OT Date */}
+          <div>
+            <label className="text-[10px] text-dark-400 font-semibold block mb-1">OT Date *</label>
+            <input
+              type="date"
+              value={form.otDate}
+              onChange={(e) => onFormChange('otDate', e.target.value)}
+              className="input-field text-sm"
+              required
+            />
+          </div>
+
+          {/* Time Mode Selection */}
+          <div>
+            <label className="text-[10px] text-dark-400 font-semibold block mb-2">Time Mode</label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="timeMode"
+                  value="shift"
+                  checked={form.timeMode === 'shift'}
+                  onChange={(e) => {
+                    onFormChange('timeMode', 'shift');
+                    onFormChange('shiftType', '8:00 AM - 4:00 PM');
+                  }}
+                  className="accent-violet-500"
+                />
+                Shift Time
+              </label>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="timeMode"
+                  value="custom"
+                  checked={form.timeMode === 'custom'}
+                  onChange={(e) => {
+                    onFormChange('timeMode', 'custom');
+                    onFormChange('shiftType', 'Custom');
+                  }}
+                  className="accent-violet-500"
+                />
+                Custom Time
+              </label>
+            </div>
+          </div>
+
+          {/* Conditional Time Inputs */}
+          {form.timeMode === 'shift' ? (
+            <div>
+              <label className="text-[10px] text-dark-400 font-semibold block mb-1">
+                Select Shift <span className="text-violet-400">(Auto-populates OT record)</span>
+              </label>
+              <select
+                value={form.shiftType}
+                onChange={(e) => onFormChange('shiftType', e.target.value)}
+                className="input-field text-sm"
+              >
+                {[
+                  '8:00 AM - 4:00 PM',
+                  '9:00 AM - 5:00 PM',
+                  '2:00 PM - 10:00 PM',
+                  '4:00 PM - 8:00 AM',
+                  '7:00 AM - 3:00 PM',
+                  '1st Off',
+                  '2nd Off',
+                  'Night Off',
+                ].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-dark-400 font-semibold block mb-1">Start Time</label>
+                <input
+                  type="time"
+                  value={form.startTime}
+                  onChange={(e) => onFormChange('startTime', e.target.value)}
+                  className="input-field text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-dark-400 font-semibold block mb-1">End Time</label>
+                <input
+                  type="time"
+                  value={form.endTime}
+                  onChange={(e) => onFormChange('endTime', e.target.value)}
+                  className="input-field text-sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Message */}
+          <div>
+            <label className="text-[10px] text-dark-400 font-semibold block mb-1">Message (optional)</label>
+            <textarea
+              value={form.message}
+              onChange={(e) => onFormChange('message', e.target.value)}
+              placeholder="Additional details for employees…"
+              rows={2}
+              className="input-field text-sm resize-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-150
+              disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: saving ? '#4c1d95' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
+            }}
+          >
+            {saving ? 'Posting…' : '📢 Post Announcement'}
+          </button>
+        </form>
+      )}
+
+      {/* Active announcements */}
+      {active.length === 0 && !showForm && (
+        <p className="text-xs text-dark-400 text-center py-3">No active announcements. Click "+ New Announcement" to notify employees.</p>
+      )}
+
+      {active.length > 0 && (
+        <div className="space-y-3 mb-3">
+          {active.map((a) => {
+            const isExpanded   = expandedId === a._id;
+            const accList      = acceptances[a._id] || [];
+            const isLoadingAcc = loadingAccId === a._id;
+            const accCount     = a.acceptanceCount ?? accList.length;
+
+            return (
+              <div
+                key={a._id}
+                className="rounded-xl border overflow-hidden"
+                style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.25)' }}
+              >
+                {/* Main card row */}
+                <div className="flex items-start gap-3 p-3">
+                  <span className="text-lg shrink-0 mt-0.5">📢</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{a.title}</p>
+                    <p className="text-[10px] text-violet-300 mt-0.5">
+                      📅 {fmtDate(a.otDate)}
+                      {(a.startTime || a.endTime) && (
+                        <> &nbsp;·&nbsp; ⏰ {fmt12h(a.startTime)}{a.startTime && a.endTime ? '–' : ''}{fmt12h(a.endTime)}</>
+                      )}
+                    </p>
+                    {a.message && <p className="text-[11px] text-dark-400 mt-1 line-clamp-2">{a.message}</p>}
+
+                    {/* Acceptance count + expand button */}
+                    <button
+                      onClick={() => toggleAcceptances(a._id)}
+                      className="mt-2 flex items-center gap-1.5 text-[10px] font-bold transition-all duration-150"
+                      style={{ color: isExpanded ? '#a78bfa' : '#7c3aed' }}
+                    >
+                      <span
+                        className="px-2 py-0.5 rounded-full font-extrabold"
+                        style={{
+                          background: accCount > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)',
+                          color:      accCount > 0 ? '#6ee7b7' : '#64748b',
+                          border:     accCount > 0 ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(100,116,139,0.2)',
+                        }}
+                      >
+                        {accCount} accepted
+                      </span>
+                      {isLoadingAcc
+                        ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        : <span>{isExpanded ? '▲ Hide' : '▼ View'}</span>
+                      }
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => onDelete(a._id)}
+                    title="Deactivate announcement"
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300
+                               bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40
+                               px-2 py-1 rounded-lg transition-all duration-150 shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                {/* Expandable acceptances list */}
+                {isExpanded && (
+                  <div
+                    className="border-t px-3 py-2.5 space-y-1.5"
+                    style={{ borderColor: 'rgba(139,92,246,0.2)', background: 'rgba(0,0,0,0.15)' }}
+                  >
+                    {isLoadingAcc ? (
+                      <p className="text-[10px] text-dark-400 text-center py-2 animate-pulse">Loading…</p>
+                    ) : accList.length === 0 ? (
+                      <p className="text-[10px] text-dark-500 text-center py-2">No one has accepted yet.</p>
+                    ) : (
+                      accList.map((u, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1">
+                          <div
+                            className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[9px] font-extrabold text-white"
+                            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                          >
+                            {(u.name || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-semibold text-white truncate">{u.name}</p>
+                            <p className="text-[10px] text-dark-400">{u.employeeId}</p>
+                          </div>
+                          <p className="text-[10px] text-dark-500 shrink-0">
+                            {new Date(u.acceptedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Past / deactivated */}
+      {inactive.length > 0 && (
+        <details className="mt-1">
+          <summary className="text-[10px] text-dark-500 cursor-pointer hover:text-dark-300 transition-colors">
+            {inactive.length} past announcement{inactive.length > 1 ? 's' : ''}
+          </summary>
+          <div className="space-y-1.5 mt-2">
+            {inactive.map((a) => (
+              <div key={a._id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-700/30 border border-dark-600/50 opacity-50">
+                <span className="text-xs">📢</span>
+                <p className="text-[11px] text-dark-400 truncate flex-1">{a.title}</p>
+                <p className="text-[10px] text-dark-500 shrink-0">{fmtDate(a.otDate)}</p>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );
