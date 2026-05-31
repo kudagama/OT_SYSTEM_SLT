@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
-import { getShiftDurationHours } from '../constants';
+import { getShiftDurationHours, todayISODate, getAvailableShiftTypes } from '../constants';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -45,7 +45,12 @@ export default function AdminDashboard({ adminUser, onLogout }) {
         const [s, u, a] = await Promise.all([api.adminStats(), api.adminUsers(), api.adminGetAnnouncements()]);
         setStats(s);
         setUsers(u.users || []);
-        setAnnouncements(a.data || []);
+        const todayStr = todayISODate();
+        const validAnns = (a.data || []).filter(ann => {
+          if (!ann.otDate) return true;
+          return new Date(ann.otDate).toISOString().split('T')[0] >= todayStr;
+        });
+        setAnnouncements(validAnns);
       } catch { /* ignore */ }
       finally   { setLoading(false); }
     })();
@@ -660,16 +665,7 @@ function AnnouncementsPanel({ announcements, showForm, onToggleForm, form, onFor
                 onChange={(e) => onFormChange('shiftType', e.target.value)}
                 className="input-field text-sm"
               >
-                {[
-                  '8:00 AM - 4:00 PM',
-                  '9:00 AM - 5:00 PM',
-                  '2:00 PM - 10:00 PM',
-                  '4:00 PM - 8:00 AM',
-                  '7:00 AM - 3:00 PM',
-                  '1st Off',
-                  '2nd Off',
-                  'Night Off',
-                ].map((s) => (
+                {getAvailableShiftTypes(form.otDate).filter(s => s !== 'Custom').map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>

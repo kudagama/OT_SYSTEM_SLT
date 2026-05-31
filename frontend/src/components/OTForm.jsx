@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { SHIFT_TYPES, todayISODate } from '../constants';
+import { SHIFT_TYPES, todayISODate, getAvailableShiftTypes } from '../constants';
 import { api } from '../api';
 
 const EMPTY_FORM = {
@@ -97,7 +97,19 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     if (!form.date || !schedule) return;
     const scheduled = schedule[form.date];    // "YYYY-MM-DD" key
     if (scheduled) {
-      setForm((f) => ({ ...f, shiftType: scheduled, _autoFilledShift: true }));
+      setForm((f) => {
+        const nf = { ...f, shiftType: scheduled, _autoFilledShift: true };
+        if (scheduled === '1:00 PM - 10:00 PM' && !nf.otStartTime && !nf.otEndTime) {
+          nf.otStartTime = '21:00';
+          nf.otEndTime = '22:00';
+          const result = calcOT('21:00', '22:00');
+          if (result) {
+            nf.otHours = result.hours;
+            nf._otResult = result;
+          }
+        }
+        return nf;
+      });
     } else {
       // Clear auto-filled flag if date has no schedule entry
       setForm((f) => ({ ...f, _autoFilledShift: false }));
@@ -149,6 +161,19 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     const { name, value } = e.target;
     setForm((f) => {
       const updated = { ...f, [name]: value };
+      
+      if (name === 'shiftType' && value === '1:00 PM - 10:00 PM') {
+        if (!updated.otStartTime && !updated.otEndTime) {
+          updated.otStartTime = '21:00';
+          updated.otEndTime = '22:00';
+          const result = calcOT('21:00', '22:00');
+          if (result) {
+            updated.otHours = result.hours;
+            updated._otResult = result;
+          }
+        }
+      }
+
       // auto-recalc when either time field changes
       if (name === 'otStartTime') recalcHours(value, f.otEndTime);
       if (name === 'otEndTime')   recalcHours(f.otStartTime, value);
@@ -267,7 +292,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
             onChange={handleChange}
             className={`input-field ${errors.shiftType ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
           >
-            {SHIFT_TYPES.map((s) => (
+            {getAvailableShiftTypes(form.date).map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>

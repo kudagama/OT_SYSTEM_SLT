@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { SHIFT_TYPES, SHIFT_COLORS } from '../constants';
+import { SHIFT_TYPES, SHIFT_COLORS, getAvailableShiftTypes } from '../constants';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -32,13 +32,26 @@ function shortShift(shift) {
 // Fully controlled — schedule state lives in App.jsx
 // Props: schedule, saving, onSetShift(dateKey, shiftType), onClearShift(dateKey)
 // ─────────────────────────────────────────────────────────────────────────────
-export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift, selYear, selMonth }) {
+export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift, selYear, selMonth, onMonthChange }) {
   const today     = useMemo(() => new Date(), []);
   const todayKey  = toKey(today);
 
   const [pickerDay,   setPickerDay]   = useState(null);
   const [viewDay,     setViewDay]     = useState(null);
   const [refDate,     setRefDate]     = useState(today);
+
+  const handleNav = (daysToAdd) => {
+    const next = new Date(refDate);
+    next.setDate(next.getDate() + daysToAdd);
+    setRefDate(next);
+    if (onMonthChange) onMonthChange(next.getFullYear(), next.getMonth() + 1);
+  };
+
+  const handleToday = () => {
+    const d = new Date();
+    setRefDate(d);
+    if (onMonthChange) onMonthChange(d.getFullYear(), d.getMonth() + 1);
+  };
 
   // Sync with Dashboard's selected month/year
   useEffect(() => {
@@ -84,14 +97,14 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
           )}
-          <button onClick={() => setRefDate(d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))} className="btn-icon" title="Previous week">
+          <button onClick={() => handleNav(-7)} className="btn-icon" title="Previous week">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           
           <button
-            onClick={() => setRefDate(new Date())}
+            onClick={handleToday}
             className="text-[10px] font-bold text-brand-300 bg-brand-500/10
                        border border-brand-500/25 px-2 py-1 rounded-lg
                        hover:bg-brand-500/20 transition-all duration-150"
@@ -99,7 +112,7 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
             Today
           </button>
           
-          <button onClick={() => setRefDate(d => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))} className="btn-icon" title="Next week">
+          <button onClick={() => handleNav(7)} className="btn-icon" title="Next week">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -276,7 +289,7 @@ function ShiftPicker({ dateKey, current, onSelect, onClear, onClose }) {
           </div>
 
           <div className="p-3 grid grid-cols-1 gap-1.5 max-h-72 overflow-y-auto overscroll-contain">
-            {SHIFT_TYPES.map((shift) => {
+            {getAvailableShiftTypes(dateKey).map((shift) => {
               const colors   = SHIFT_COLORS[shift] || {};
               const selected = current === shift;
               return (

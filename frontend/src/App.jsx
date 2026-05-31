@@ -9,7 +9,7 @@ import AdminDashboard         from './components/AdminDashboard';
 import OTAnnouncementPopup    from './components/OTAnnouncementPopup';
 import OTAnnouncementsSection from './components/OTAnnouncementsSection';
 import { api }                from './api';
-import { getShiftDurationHours } from './constants';
+import { getShiftDurationHours, todayISODate } from './constants';
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 function getStoredToken() {
@@ -106,7 +106,14 @@ export default function App() {
       
       const fetchAnnouncements = () => {
         api.getActiveAnnouncements()
-          .then((res) => setAnnouncements(res.data || []))
+          .then((res) => {
+            const todayStr = todayISODate();
+            const valid = (res.data || []).filter(a => {
+              if (!a.otDate) return true;
+              return new Date(a.otDate).toISOString().split('T')[0] >= todayStr;
+            });
+            setAnnouncements(valid);
+          })
           .catch((err) => {
             console.error("Announcements fetch error:", err);
             setAnnError(err.message);
@@ -132,20 +139,23 @@ export default function App() {
     try {
       const res = await api.setScheduleDay(dateKey, { shiftType });
       setSchedule(res.entries || {});
+      fetchRecords(); // To pick up any auto-generated OT
     } catch {
       setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; }); // revert
     } finally { setSchedSaving(false); }
-  }, []);
+  }, [fetchRecords]);
 
   const handleClearShift = useCallback(async (dateKey) => {
-    setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; }); // optimistic
+    setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; });
     setSchedSaving(true);
     try {
       const res = await api.deleteScheduleDay(dateKey);
       setSchedule(res.entries || {});
-    } catch { fetchSchedule(); } // revert via refetch
-    finally  { setSchedSaving(false); }
-  }, [fetchSchedule]);
+      fetchRecords(); // To remove any auto-generated OT
+    } catch {
+      fetchSchedule(); // revert
+    } finally { setSchedSaving(false); }
+  }, [fetchSchedule, fetchRecords]);
 
   // ── Enhanced summary (records + schedule for selected month) ──────────────
   const summary = useMemo(() => {
@@ -323,6 +333,7 @@ export default function App() {
           onClearShift={handleClearShift}
           selYear={selYear}
           selMonth={selMonth}
+          onMonthChange={(y, m) => { setSelYear(y); setSelMonth(m); }}
         />
 
         {/* OT Entry Form */}

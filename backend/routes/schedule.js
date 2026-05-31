@@ -1,6 +1,7 @@
 const express        = require('express');
 const router         = express.Router();
 const Schedule       = require('../models/Schedule');
+const OTRecord       = require('../models/OTRecord');
 const authMiddleware = require('../middleware/auth');
 
 // All schedule routes require authentication
@@ -45,6 +46,30 @@ router.put('/:dateKey', async (req, res) => {
       { upsert: true }
     );
 
+    if (shiftType === '1:00 PM - 10:00 PM') {
+      // Auto-create OT record if one doesn't exist for this date
+      await OTRecord.findOneAndUpdate(
+        { userId: req.user.id, date: new Date(dateKey) },
+        {
+          $setOnInsert: {
+            shiftType: '1:00 PM - 10:00 PM',
+            otStartTime: '21:00',
+            otEndTime: '22:00',
+            otHours: 1,
+            notes: '[Auto] 1-10 Shift OT',
+          }
+        },
+        { upsert: true, runValidators: true }
+      );
+    } else {
+      // Remove any auto-generated OT record for this date if they change the shift
+      await OTRecord.findOneAndDelete({
+        userId: req.user.id,
+        date: new Date(dateKey),
+        notes: '[Auto] 1-10 Shift OT'
+      });
+    }
+
     // Refetch to get the authoritative state
     const doc = await Schedule.findOne({ userId: req.user.id });
     res.json({ success: true, entries: doc ? doc.entries : {} });
@@ -63,6 +88,13 @@ router.delete('/:dateKey', async (req, res) => {
       { $unset: { [`entries.${dateKey}`]: '' } }
     );
 
+    // Also delete any auto-generated OT record
+    await OTRecord.findOneAndDelete({
+      userId: req.user.id,
+      date: new Date(dateKey),
+      notes: '[Auto] 1-10 Shift OT'
+    });
+
     const doc = await Schedule.findOne({ userId: req.user.id });
     res.json({ success: true, entries: doc ? doc.entries : {} });
   } catch (err) {
@@ -78,6 +110,12 @@ router.delete('/', async (req, res) => {
       { $set: { entries: {} } },
       { upsert: true }
     );
+
+    // Also delete ALL auto-generated OT records for this user
+    await OTRecord.deleteMany({
+      userId: req.user.id,
+      notes: '[Auto] 1-10 Shift OT'
+    });
     res.json({ success: true, entries: {} });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
