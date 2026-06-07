@@ -32,7 +32,7 @@ function shortShift(shift) {
 // Fully controlled — schedule state lives in App.jsx
 // Props: schedule, saving, onSetShift(dateKey, shiftType), onClearShift(dateKey)
 // ─────────────────────────────────────────────────────────────────────────────
-export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift, selYear, selMonth, onMonthChange }) {
+export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift, selYear, selMonth, onMonthChange, onSelectDay }) {
   const today     = useMemo(() => new Date(), []);
   const todayKey  = toKey(today);
 
@@ -135,6 +135,7 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
               onClick={() => {
                 if (shift) setViewDay(key);
                 else setPickerDay(key);
+                if (onSelectDay) onSelectDay(key);
               }}
               className={`
                 flex flex-col items-center shrink-0 snap-start

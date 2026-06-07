@@ -31,6 +31,7 @@ export default function App() {
   const [annError, setAnnError]       = useState(null); // DEBUG for announcements
   const [showProfile, setShowProfile] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
+  const [selectedOTDate, setSelectedOTDate] = useState(todayISODate());
 
   // ── Selected month ────────────────────────────────────────────────────────
   const [selYear,  setSelYear]  = useState(now.getFullYear());
@@ -334,6 +335,7 @@ export default function App() {
           selYear={selYear}
           selMonth={selMonth}
           onMonthChange={(y, m) => { setSelYear(y); setSelMonth(m); }}
+          onSelectDay={setSelectedOTDate}
         />
 
         {/* OT Entry Form */}
@@ -342,6 +344,7 @@ export default function App() {
           editRecord={editRecord}
           onCancelEdit={() => setEditRecord(null)}
           schedule={schedule}
+          selectedDate={selectedOTDate}
         />
 
         {/* History */}

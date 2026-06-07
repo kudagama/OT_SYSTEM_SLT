@@ -75,7 +75,7 @@ function getShiftDurationHours(shiftType) {
   return (e - s) / 60;
 }
 
-export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {} }) {
+export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {}, selectedDate }) {
   const [form, setForm]       = useState(EMPTY_FORM);
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
@@ -97,6 +97,14 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   }, [editRecord]);
 
   const isEditing = Boolean(editRecord);
+
+  // Update form date when selectedDate prop changes (new entries only)
+  useEffect(() => {
+    if (isEditing) return;
+    if (selectedDate) {
+      setForm((f) => ({ ...f, date: selectedDate }));
+    }
+  }, [selectedDate, isEditing]);
 
   // Auto-fill shiftType from weekly schedule when date is picked (new entries only)
   useEffect(() => {
