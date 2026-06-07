@@ -3,12 +3,14 @@ import { SHIFT_TYPES, todayISODate, getAvailableShiftTypes } from '../constants'
 import { api } from '../api';
 
 const EMPTY_FORM = {
-  date:         todayISODate(),
-  shiftType:    SHIFT_TYPES[0],
-  otStartTime:  '',
-  otEndTime:    '',
-  otHours:      '',
-  notes:        '',
+  date:            todayISODate(),
+  shiftType:       SHIFT_TYPES[0],
+  otStartTime:     '',
+  otEndTime:       '',
+  pearlLoginTime:  '',
+  pearlLogoutTime: '',
+  otHours:         '',
+  notes:           '',
 };
 
 /**
@@ -78,12 +80,14 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   useEffect(() => {
     if (editRecord) {
       setForm({
-        date:        editRecord.date?.split('T')[0] || todayISODate(),
-        shiftType:   editRecord.shiftType || SHIFT_TYPES[0],
-        otStartTime: editRecord.otStartTime || '',
-        otEndTime:   editRecord.otEndTime   || '',
-        otHours:     editRecord.otHours ?? '',
-        notes:       editRecord.notes   || '',
+        date:            editRecord.date?.split('T')[0] || todayISODate(),
+        shiftType:       editRecord.shiftType || SHIFT_TYPES[0],
+        otStartTime:     editRecord.otStartTime || '',
+        otEndTime:       editRecord.otEndTime   || '',
+        pearlLoginTime:  editRecord.pearlLoginTime || '',
+        pearlLogoutTime: editRecord.pearlLogoutTime || '',
+        otHours:         editRecord.otHours ?? '',
+        notes:           editRecord.notes   || '',
       });
       setErrors({});
     }
@@ -102,6 +106,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         if (scheduled === '1:00 PM - 10:00 PM' && !nf.otStartTime && !nf.otEndTime) {
           nf.otStartTime = '21:00';
           nf.otEndTime = '22:00';
+          nf.pearlLoginTime = '21:00';
+          nf.pearlLogoutTime = '22:00';
           const result = calcOT('21:00', '22:00');
           if (result) {
             nf.otHours = result.hours;
@@ -117,7 +123,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.date, schedule]);
 
-  // Auto-recalc otHours whenever start/end time changes
+  // Auto-recalc otHours whenever Pearl start/end time changes
   const recalcHours = useCallback((start, end) => {
     const result = calcOT(start, end);
     if (result !== null) {
@@ -130,7 +136,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     const e = {};
     if (!form.date)      e.date = 'Date is required.';
     if (!form.shiftType) e.shiftType = 'Please select a shift type.';
-    if (form.otStartTime && form.otEndTime) {
+    if (form.pearlLoginTime && form.pearlLogoutTime) {
       // times provided — auto-calculated; ineligible (< 1h) saved as 0 hours
       // 24h cap: check calculated result
       const hrs = parseFloat(form.otHours) || 0;
@@ -139,7 +145,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
       }
     } else if (form.otHours === '' || form.otHours === null) {
-      e.otHours = 'Enter OT hours manually or pick a start & end time.';
+      e.otHours = 'Enter OT hours manually or pick a Pearl login & logout time.';
     } else {
       const hrs     = parseFloat(form.otHours);
       const shiftH  = getShiftDurationHours(form.shiftType);
@@ -166,6 +172,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         if (!updated.otStartTime && !updated.otEndTime) {
           updated.otStartTime = '21:00';
           updated.otEndTime = '22:00';
+          updated.pearlLoginTime = '21:00';
+          updated.pearlLogoutTime = '22:00';
           const result = calcOT('21:00', '22:00');
           if (result) {
             updated.otHours = result.hours;
@@ -174,9 +182,9 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         }
       }
 
-      // auto-recalc when either time field changes
-      if (name === 'otStartTime') recalcHours(value, f.otEndTime);
-      if (name === 'otEndTime')   recalcHours(f.otStartTime, value);
+      // auto-recalc when either Pearl time field changes
+      if (name === 'pearlLoginTime') recalcHours(value, f.pearlLogoutTime);
+      if (name === 'pearlLogoutTime') recalcHours(f.pearlLoginTime, value);
       return updated;
     });
     if (errors[name]) setErrors((er) => ({ ...er, [name]: undefined }));
@@ -217,7 +225,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   // derived display for auto-calculated hours
   const shiftDuration = getShiftDurationHours(form.shiftType);
   const maxOT         = 24 - shiftDuration;                      // hard ceiling
-  const autoCalced    = form.otStartTime && form.otEndTime && form.otHours !== '';
+  const autoCalced    = form.pearlLoginTime && form.pearlLogoutTime && form.otHours !== '';
   const otResult      = form._otResult || null;
   const otExceeds24   = autoCalced && otResult && (parseFloat(form.otHours) + shiftDuration) >= 24;
 
@@ -303,7 +311,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         <div>
           <label className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
             OT Time Range
-            <span className="normal-case text-dark-400 ml-1">(auto-calculates hours)</span>
+            <span className="normal-case text-dark-400 ml-1">(approved window)</span>
           </label>
           <div className="grid grid-cols-2 gap-3">
             {/* Start Time */}
@@ -331,12 +339,46 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
               />
             </div>
           </div>
+        </div>
+
+        {/* ── Pearl Logs ────────────────────────────────────────────────────── */}
+        <div>
+          <label className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
+            Pearl Log In / Logout Times
+            <span className="normal-case text-dark-400 ml-1">(auto-calculates hours)</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Pearl Login Time */}
+            <div>
+              <label htmlFor="pearl-login" className="block text-xs text-dark-400 mb-1">From</label>
+              <input
+                id="pearl-login"
+                type="time"
+                name="pearlLoginTime"
+                value={form.pearlLoginTime}
+                onChange={handleChange}
+                className="input-field"
+              />
+            </div>
+            {/* Pearl Logout Time */}
+            <div>
+              <label htmlFor="pearl-logout" className="block text-xs text-dark-400 mb-1">To</label>
+              <input
+                id="pearl-logout"
+                type="time"
+                name="pearlLogoutTime"
+                value={form.pearlLogoutTime}
+                onChange={handleChange}
+                className="input-field"
+              />
+            </div>
+          </div>
 
           {/* Auto-calc indicator */}
           {autoCalced && otResult && (
             <div className="mt-2 animate-fade-in space-y-1">
               {/* Overnight badge */}
-              {form.otEndTime < form.otStartTime && (
+              {form.pearlLogoutTime < form.pearlLoginTime && (
                 <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   🌙 Overnight
                 </span>

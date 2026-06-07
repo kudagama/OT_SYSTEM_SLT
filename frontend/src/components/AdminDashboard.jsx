@@ -502,11 +502,14 @@ function EmployeeDetail({ user, records, allRecords, schedule, loading, filterYe
                   <p className="text-[10px] text-dark-400 truncate">{r.shiftType}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`text-sm font-bold ${r.shiftType === '2nd Off' ? 'text-cyan-300' : 'text-brand-300'}`}>
+                  <p className={`text-sm font-bold mb-0.5 ${r.shiftType === '2nd Off' ? 'text-cyan-300' : 'text-brand-300'}`}>
                     {fmt(r.otHours)}h
                   </p>
                   {r.otStartTime && r.otEndTime && (
-                    <p className="text-[10px] text-dark-500">{r.otStartTime}–{r.otEndTime}</p>
+                    <p className="text-[9px] text-dark-500 leading-tight">OT: {r.otStartTime}–{r.otEndTime}</p>
+                  )}
+                  {r.pearlLoginTime && r.pearlLogoutTime && (
+                    <p className="text-[9px] text-amber-400/80 leading-tight">Pearl: {r.pearlLoginTime}–{r.pearlLogoutTime}</p>
                   )}
                 </div>
               </div>

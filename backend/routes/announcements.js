@@ -137,12 +137,14 @@ router.post('/:id/accept', async (req, res) => {
 
     const otRecord = await OTRecord.create({
       userId,
-      date:        ann.otDate,
-      shiftType:   ann.shiftType,
-      otStartTime: fmt12h(ann.startTime),
-      otEndTime:   fmt12h(ann.endTime),
-      otHours:     otHours > 0 ? otHours : 0,
-      notes:       `[Auto] ${ann.title}`,
+      date:            ann.otDate,
+      shiftType:       ann.shiftType,
+      otStartTime:     fmt12h(ann.startTime),
+      otEndTime:       fmt12h(ann.endTime),
+      pearlLoginTime:  ann.startTime || '',
+      pearlLogoutTime: ann.endTime || '',
+      otHours:         otHours > 0 ? otHours : 0,
+      notes:           `[Auto] ${ann.title}`,
     });
 
     if (!ann.acceptances) ann.acceptances = [];

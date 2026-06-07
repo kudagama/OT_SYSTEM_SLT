@@ -43,6 +43,16 @@ const OTRecordSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    pearlLoginTime: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    pearlLogoutTime: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     otHours: {
       type: Number,
       required: [true, 'OT hours are required'],

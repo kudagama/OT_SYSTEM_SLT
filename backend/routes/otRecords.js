@@ -56,16 +56,18 @@ router.get('/', async (req, res) => {
 // ─── POST /api/ot ─────────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
-    const { date, shiftType, otStartTime, otEndTime, otHours, notes } = req.body;
+    const { date, shiftType, otStartTime, otEndTime, pearlLoginTime, pearlLogoutTime, otHours, notes } = req.body;
 
     const record = new OTRecord({
       userId:      req.user.id,
       date:        new Date(date),
       shiftType,
-      otStartTime: otStartTime || '',
-      otEndTime:   otEndTime   || '',
-      otHours:     parseFloat(otHours),
-      notes:       notes || '',
+      otStartTime:     otStartTime || '',
+      otEndTime:       otEndTime   || '',
+      pearlLoginTime:  pearlLoginTime || '',
+      pearlLogoutTime: pearlLogoutTime || '',
+      otHours:         parseFloat(otHours),
+      notes:           notes || '',
     });
 
     const saved = await record.save();
@@ -82,7 +84,7 @@ router.post('/', async (req, res) => {
 // ─── PUT /api/ot/:id ──────────────────────────────────────────────────────────
 router.put('/:id', async (req, res) => {
   try {
-    const { date, shiftType, otStartTime, otEndTime, otHours, notes } = req.body;
+    const { date, shiftType, otStartTime, otEndTime, pearlLoginTime, pearlLogoutTime, otHours, notes } = req.body;
 
     // Ensure the record belongs to the requesting user
     const existing = await OTRecord.findOne({ _id: req.params.id, userId: req.user.id });
@@ -93,12 +95,14 @@ router.put('/:id', async (req, res) => {
     const updated = await OTRecord.findByIdAndUpdate(
       req.params.id,
       {
-        date:        new Date(date),
+        date:            new Date(date),
         shiftType,
-        otStartTime: otStartTime || '',
-        otEndTime:   otEndTime   || '',
-        otHours:     parseFloat(otHours),
-        notes:       notes || '',
+        otStartTime:     otStartTime || '',
+        otEndTime:       otEndTime   || '',
+        pearlLoginTime:  pearlLoginTime || '',
+        pearlLogoutTime: pearlLogoutTime || '',
+        otHours:         parseFloat(otHours),
+        notes:           notes || '',
       },
       { new: true, runValidators: true }
     );
