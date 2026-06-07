@@ -5,8 +5,6 @@ import { api } from '../api';
 const EMPTY_FORM = {
   date:            todayISODate(),
   shiftType:       SHIFT_TYPES[0],
-  otStartTime:     '',
-  otEndTime:       '',
   pearlLoginTime:  '',
   pearlLogoutTime: '',
   otHours:         '',
@@ -22,7 +20,7 @@ const EMPTY_FORM = {
  *
  * Returns { hours, totalMins, eligible, remainderMins, roundedRemainder }
  */
-function calcOT(start, end) {
+function calcOT(start, end, shiftType) {
   if (!start || !end) return null;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
@@ -31,22 +29,29 @@ function calcOT(start, end) {
   if (endMins <= startMins) endMins += 24 * 60; // overnight
   const totalMins = endMins - startMins;
 
-  // Rule 1: minimum 1 hour
-  if (totalMins < 60) {
-    return { hours: 0, totalMins, eligible: false, remainderMins: 0, roundedRemainder: 0 };
+  // If it's an off day or custom, there are no regular working hours.
+  // Otherwise, the regular working hours are 8 hours (480 minutes).
+  const isOffDay = shiftType && (shiftType.includes('Off') || shiftType === 'Custom');
+  const regularMins = isOffDay ? 0 : 480;
+
+  const otMins = totalMins - regularMins;
+
+  // Minimum 1 hour of OT required
+  if (otMins < 60) {
+    return { hours: 0, totalMins, otMins, eligible: false, remainderMins: 0, roundedRemainder: 0, regularMins };
   }
 
-  // Rule 2 & 3: 1 guaranteed hour + floor remainder to nearest 15
-  const remainderMins    = totalMins - 60;
-  const roundedRemainder = Math.floor(remainderMins / 15) * 15; // floor to nearest 15
+  // First hour is guaranteed 1.0h, floor the rest to nearest 15 mins
+  const remainderMins    = otMins - 60;
+  const roundedRemainder = Math.floor(remainderMins / 15) * 15;
   const hours            = 1 + roundedRemainder / 60;
 
-  return { hours, totalMins, eligible: true, remainderMins, roundedRemainder };
+  return { hours, totalMins, otMins, eligible: true, remainderMins, roundedRemainder, regularMins };
 }
 
 /** Legacy thin wrapper used for backward-compat (returns numeric hours or '') */
-function calcHours(start, end) {
-  const r = calcOT(start, end);
+function calcHours(start, end, shiftType) {
+  const r = calcOT(start, end, shiftType);
   return r === null ? '' : r.hours;
 }
 
@@ -82,8 +87,6 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       setForm({
         date:            editRecord.date?.split('T')[0] || todayISODate(),
         shiftType:       editRecord.shiftType || SHIFT_TYPES[0],
-        otStartTime:     editRecord.otStartTime || '',
-        otEndTime:       editRecord.otEndTime   || '',
         pearlLoginTime:  editRecord.pearlLoginTime || '',
         pearlLogoutTime: editRecord.pearlLogoutTime || '',
         otHours:         editRecord.otHours ?? '',
@@ -103,12 +106,10 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     if (scheduled) {
       setForm((f) => {
         const nf = { ...f, shiftType: scheduled, _autoFilledShift: true };
-        if (scheduled === '1:00 PM - 10:00 PM' && !nf.otStartTime && !nf.otEndTime) {
-          nf.otStartTime = '21:00';
-          nf.otEndTime = '22:00';
-          nf.pearlLoginTime = '21:00';
+        if (scheduled === '1:00 PM - 10:00 PM') {
+          nf.pearlLoginTime = '13:00';
           nf.pearlLogoutTime = '22:00';
-          const result = calcOT('21:00', '22:00');
+          const result = calcOT('13:00', '22:00', scheduled);
           if (result) {
             nf.otHours = result.hours;
             nf._otResult = result;
@@ -123,9 +124,9 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.date, schedule]);
 
-  // Auto-recalc otHours whenever Pearl start/end time changes
-  const recalcHours = useCallback((start, end) => {
-    const result = calcOT(start, end);
+  // Auto-recalc otHours whenever Pearl start/end time or shiftType changes
+  const recalcHours = useCallback((start, end, shiftType) => {
+    const result = calcOT(start, end, shiftType);
     if (result !== null) {
       setForm((f) => ({ ...f, otHours: result.hours, _otResult: result }));
       if (errors.otHours) setErrors((e) => ({ ...e, otHours: undefined }));
@@ -140,7 +141,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       // times provided — auto-calculated; ineligible (< 1h) saved as 0 hours
       // 24h cap: check calculated result
       const hrs = parseFloat(form.otHours) || 0;
-      const shiftH = getShiftDurationHours(form.shiftType);
+      const isOffDay = form.shiftType.includes('Off') || form.shiftType === 'Custom';
+      const shiftH = isOffDay ? 0 : 8;
       if (hrs + shiftH >= 24) {
         e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
       }
@@ -148,7 +150,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       e.otHours = 'Enter OT hours manually or pick a Pearl login & logout time.';
     } else {
       const hrs     = parseFloat(form.otHours);
-      const shiftH  = getShiftDurationHours(form.shiftType);
+      const isOffDay = form.shiftType.includes('Off') || form.shiftType === 'Custom';
+      const shiftH  = isOffDay ? 0 : 8;
       if (hrs < 0) {
         e.otHours = 'OT hours cannot be negative.';
       } else if (hrs + shiftH >= 24) {
@@ -169,22 +172,20 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       const updated = { ...f, [name]: value };
       
       if (name === 'shiftType' && value === '1:00 PM - 10:00 PM') {
-        if (!updated.otStartTime && !updated.otEndTime) {
-          updated.otStartTime = '21:00';
-          updated.otEndTime = '22:00';
-          updated.pearlLoginTime = '21:00';
-          updated.pearlLogoutTime = '22:00';
-          const result = calcOT('21:00', '22:00');
-          if (result) {
-            updated.otHours = result.hours;
-            updated._otResult = result;
-          }
+        updated.pearlLoginTime = '13:00';
+        updated.pearlLogoutTime = '22:00';
+        const result = calcOT('13:00', '22:00', value);
+        if (result) {
+          updated.otHours = result.hours;
+          updated._otResult = result;
         }
+      } else if (name === 'shiftType') {
+        recalcHours(f.pearlLoginTime, f.pearlLogoutTime, value);
       }
 
       // auto-recalc when either Pearl time field changes
-      if (name === 'pearlLoginTime') recalcHours(value, f.pearlLogoutTime);
-      if (name === 'pearlLogoutTime') recalcHours(f.pearlLoginTime, value);
+      if (name === 'pearlLoginTime') recalcHours(value, f.pearlLogoutTime, f.shiftType);
+      if (name === 'pearlLogoutTime') recalcHours(f.pearlLoginTime, value, f.shiftType);
       return updated;
     });
     if (errors[name]) setErrors((er) => ({ ...er, [name]: undefined }));
@@ -223,7 +224,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   }
 
   // derived display for auto-calculated hours
-  const shiftDuration = getShiftDurationHours(form.shiftType);
+  const isOffDay      = form.shiftType.includes('Off') || form.shiftType === 'Custom';
+  const shiftDuration = isOffDay ? 0 : 8;
   const maxOT         = 24 - shiftDuration;                      // hard ceiling
   const autoCalced    = form.pearlLoginTime && form.pearlLogoutTime && form.otHours !== '';
   const otResult      = form._otResult || null;
@@ -307,40 +309,6 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
           {errors.shiftType && <p className="text-xs text-red-400 mt-1">{errors.shiftType}</p>}
         </div>
 
-        {/* ── OT Time Range ─────────────────────────────────────────────────── */}
-        <div>
-          <label className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
-            OT Time Range
-            <span className="normal-case text-dark-400 ml-1">(approved window)</span>
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Start Time */}
-            <div>
-              <label htmlFor="ot-start" className="block text-xs text-dark-400 mb-1">From</label>
-              <input
-                id="ot-start"
-                type="time"
-                name="otStartTime"
-                value={form.otStartTime}
-                onChange={handleChange}
-                className="input-field"
-              />
-            </div>
-            {/* End Time */}
-            <div>
-              <label htmlFor="ot-end" className="block text-xs text-dark-400 mb-1">To</label>
-              <input
-                id="ot-end"
-                type="time"
-                name="otEndTime"
-                value={form.otEndTime}
-                onChange={handleChange}
-                className="input-field"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* ── Pearl Logs ────────────────────────────────────────────────────── */}
         <div>
           <label className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
@@ -407,7 +375,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
                     Payable OT: <span className="text-emerald-200 font-bold">{form.otHours}h</span>
                   </div>
                   <div className="text-emerald-400/80 pl-5">
-                    1h base + {otResult.roundedRemainder}min
+                    {otResult.regularMins > 0 ? `After 8h regular shift (${otResult.roundedRemainder + 60}min OT)` : `All hours count (${otResult.roundedRemainder + 60}min OT)`}
                     {otResult.remainderMins !== otResult.roundedRemainder && (
                       <span className="text-amber-400/80 ml-1">
                         (rounded ↓ from {otResult.remainderMins}min)
@@ -424,7 +392,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
                     </svg>
                     Not eligible — total {otResult.totalMins}min &lt; 1 hour minimum
                   </div>
-                  <div className="text-red-400/80 pl-5">Payable OT: 0h</div>
+                  <div className="text-red-400/80 pl-5 text-[11px]">Payable OT: 0h {otResult.regularMins > 0 ? `(worked ${Math.floor(otResult.totalMins / 60)}h ${otResult.totalMins % 60}m / 8h req.)` : ''}</div>
                 </div>
               )}
             </div>

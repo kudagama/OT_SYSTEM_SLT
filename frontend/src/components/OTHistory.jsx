@@ -69,32 +69,22 @@ function OTCard({ record, onEdit, onDelete }) {
             <span className="text-dark-300 font-normal text-xs ml-1">OT</span>
           </span>
         </div>
-        {/* Time ranges: Approved OT Range & Pearl logs */}
-        <div className="flex flex-col gap-1 text-xs text-dark-300 mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase font-bold text-brand-400 bg-brand-500/10 border border-brand-500/25 px-1.5 py-0.5 rounded shrink-0">OT Range</span>
-            {record.otStartTime && record.otEndTime ? (
-              <>
-                <span className="font-semibold text-white">{record.otStartTime}</span>
-                <span className="text-dark-500">→</span>
-                <span className="font-semibold text-white">{record.otEndTime}</span>
-              </>
-            ) : (
-              <span className="text-dark-500 italic">No time set</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded shrink-0">Pearl</span>
-            {record.pearlLoginTime && record.pearlLogoutTime ? (
-              <>
-                <span className="font-semibold text-white">{record.pearlLoginTime}</span>
-                <span className="text-dark-500">→</span>
-                <span className="font-semibold text-white">{record.pearlLogoutTime}</span>
-              </>
-            ) : (
-              <span className="text-dark-500 italic text-[11px] font-medium">No Pearl logs set — edit to add</span>
-            )}
-          </div>
+        {/* Time range row — always visible */}
+        <div className="flex items-center gap-1.5 text-xs text-dark-300 mb-1">
+          <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {record.pearlLoginTime && record.pearlLogoutTime ? (
+            <>
+              <span className="font-semibold text-white">{record.pearlLoginTime}</span>
+              <span className="text-dark-500">→</span>
+              <span className="font-semibold text-white">{record.pearlLogoutTime}</span>
+              <span className="text-[10px] text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded ml-1">Pearl</span>
+            </>
+          ) : (
+            <span className="text-dark-500 italic">No Pearl times set — edit to add</span>
+          )}
         </div>
         {record.notes && (
           <p className="text-xs text-dark-300 truncate">{record.notes}</p>

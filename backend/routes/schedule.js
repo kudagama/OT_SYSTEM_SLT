@@ -53,9 +53,7 @@ router.put('/:dateKey', async (req, res) => {
         {
           $setOnInsert: {
             shiftType: '1:00 PM - 10:00 PM',
-            otStartTime: '21:00',
-            otEndTime: '22:00',
-            pearlLoginTime: '21:00',
+            pearlLoginTime: '13:00',
             pearlLogoutTime: '22:00',
             otHours: 1,
             notes: '[Auto] 1-10 Shift OT',
