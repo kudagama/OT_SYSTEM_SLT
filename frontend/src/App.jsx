@@ -179,7 +179,11 @@ export default function App() {
     const dayMap = {};
     monthRecords.forEach((r) => {
       const key = new Date(r.date).toISOString().split('T')[0]; // YYYY-MM-DD (UTC)
-      dayMap[key] = { otHours: r.otHours || 0, shiftType: r.shiftType };
+      if (dayMap[key]) {
+        dayMap[key].otHours += r.otHours || 0;
+      } else {
+        dayMap[key] = { otHours: r.otHours || 0, shiftType: r.shiftType };
+      }
     });
     // Add schedule days that have no OT record
     Object.entries(monthSchedule).forEach(([key, shiftType]) => {

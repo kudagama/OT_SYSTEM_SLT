@@ -20,14 +20,46 @@ const EMPTY_FORM = {
  *
  * Returns { hours, totalMins, eligible, remainderMins, roundedRemainder }
  */
+function parseTimeToMinutes(timeStr) {
+  if (!timeStr) return NaN;
+  // Match standard 24h format HH:MM:SS or HH:MM
+  const match24 = timeStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (match24) {
+    const h = parseInt(match24[1], 10);
+    const m = parseInt(match24[2], 10);
+    return h * 60 + m;
+  }
+  // Match 12h format HH:MM AM/PM
+  const match12 = timeStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)$/i);
+  if (match12) {
+    let h = parseInt(match12[1], 10);
+    const m = parseInt(match12[2], 10);
+    const ampm = match12[4].toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  // Fallback to simple split
+  const parts = timeStr.split(':');
+  if (parts.length >= 2) {
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (!isNaN(h) && !isNaN(m)) {
+      return h * 60 + m;
+    }
+  }
+  return NaN;
+}
+
 function calcOT(start, end, shiftType) {
   if (!start || !end) return null;
-  const [sh, sm] = start.split(':').map(Number);
-  const [eh, em] = end.split(':').map(Number);
-  let startMins = sh * 60 + sm;
-  let endMins   = eh * 60 + em;
-  if (endMins <= startMins) endMins += 24 * 60; // overnight
-  const totalMins = endMins - startMins;
+  const startMins = parseTimeToMinutes(start);
+  const endMins   = parseTimeToMinutes(end);
+  if (isNaN(startMins) || isNaN(endMins)) return null;
+
+  let adjustedEndMins = endMins;
+  if (adjustedEndMins <= startMins) adjustedEndMins += 24 * 60; // overnight
+  const totalMins = adjustedEndMins - startMins;
 
   // If it's an off day or custom, there are no regular working hours.
   // Otherwise, the regular working hours are 8 hours (480 minutes).
@@ -132,15 +164,6 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.date, schedule]);
 
-  // Auto-recalc otHours whenever Pearl start/end time or shiftType changes
-  const recalcHours = useCallback((start, end, shiftType) => {
-    const result = calcOT(start, end, shiftType);
-    if (result !== null) {
-      setForm((f) => ({ ...f, otHours: result.hours, _otResult: result }));
-      if (errors.otHours) setErrors((e) => ({ ...e, otHours: undefined }));
-    }
-  }, [errors.otHours]);
-
   function validate() {
     const e = {};
     if (!form.date)      e.date = 'Date is required.';
@@ -187,16 +210,22 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
           updated.otHours = result.hours;
           updated._otResult = result;
         }
-      } else if (name === 'shiftType') {
-        recalcHours(f.pearlLoginTime, f.pearlLogoutTime, value);
+      } else if (name === 'shiftType' || name === 'pearlLoginTime' || name === 'pearlLogoutTime') {
+        if (updated.pearlLoginTime && updated.pearlLogoutTime) {
+          const result = calcOT(updated.pearlLoginTime, updated.pearlLogoutTime, updated.shiftType);
+          if (result !== null) {
+            updated.otHours = result.hours;
+            updated._otResult = result;
+          }
+        }
       }
-
-      // auto-recalc when either Pearl time field changes
-      if (name === 'pearlLoginTime') recalcHours(value, f.pearlLogoutTime, f.shiftType);
-      if (name === 'pearlLogoutTime') recalcHours(f.pearlLoginTime, value, f.shiftType);
       return updated;
     });
+
     if (errors[name]) setErrors((er) => ({ ...er, [name]: undefined }));
+    if (name === 'pearlLoginTime' || name === 'pearlLogoutTime' || name === 'shiftType') {
+      if (errors.otHours) setErrors((er) => ({ ...er, otHours: undefined }));
+    }
   }
 
   async function handleSubmit(e) {
