@@ -35,11 +35,13 @@ export default function Dashboard({
   onPrev, onNext, onPrevYear, onNextYear, onToday,
 }) {
   const {
-    totalOTHours    = 0,
-    totalOTDays     = 0,
-    totalShiftHours = 0,
-    totalShiftDays  = 0,
+    totalOTHours      = 0,
+    totalOTDays       = 0,
+    totalShiftHours   = 0,
+    totalShiftDays    = 0,
     totalWorkingHours = 0,
+    secondOffOTHours  = 0,
+    secondOffOTDays   = 0,
   } = summary || {};
 
   const progressPct = useMemo(
@@ -156,11 +158,36 @@ export default function Dashboard({
           </div>
 
           {/* ── 2×2 grid: OT + Shift breakdown ───────────────────────── */}
-          <div className="grid grid-cols-2 gap-2.5 mb-4">
+          <div className="grid grid-cols-2 gap-2.5 mb-2.5">
             <StatTile label="OT Hours"   value={totalOTHours.toFixed(1)} unit="hrs"  color="text-brand-300" />
             <StatTile label="OT Days"    value={totalOTDays}             unit="days" color="text-violet-300" />
             <StatTile label="Shift Hours" value={totalShiftHours.toFixed(1)} unit="hrs"  color="text-teal-300" />
             <StatTile label="Shift Days"  value={totalShiftDays}             unit="days" color="text-sky-300" />
+          </div>
+
+          {/* ── 2nd Off OT Card ────────────────────────────────────────── */}
+          <div className="bg-cyan-500/10 rounded-xl p-3.5 border border-cyan-500/20 mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0 shadow-inner">
+                <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mb-0.5">2nd Off OT Hours</p>
+                <p className="text-xl font-extrabold tracking-tight text-cyan-300 leading-none">
+                  {secondOffOTHours.toFixed(1)}
+                  <span className="text-xs font-medium text-cyan-500/80 ml-1">hrs</span>
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mb-0.5">2nd Off OT Days</p>
+              <p className="text-xl font-extrabold tracking-tight text-cyan-300 leading-none">
+                {secondOffOTDays}
+                <span className="text-xs font-medium text-cyan-500/80 ml-1">days</span>
+              </p>
+            </div>
           </div>
 
           {/* No data message */}

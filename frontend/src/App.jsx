@@ -198,7 +198,10 @@ export default function App() {
     const totalShiftDays    = allDays.length;                     // unique days with any activity
     const totalWorkingHours = totalShiftHours + totalOTHours;
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours };
+    const secondOffOTHours  = allDays.reduce((s, d) => s + (d.shiftType === '2nd Off' ? d.otHours : 0), 0);
+    const secondOffOTDays   = allDays.reduce((s, d) => s + ((d.shiftType === '2nd Off' && d.otHours > 0) ? 1 : 0), 0);
+
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, secondOffOTHours, secondOffOTDays };
   }, [records, schedule, selYear, selMonth]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
