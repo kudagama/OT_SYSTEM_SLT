@@ -42,6 +42,10 @@ export default function Dashboard({
     totalWorkingHours = 0,
     secondOffOTHours  = 0,
     secondOffOTDays   = 0,
+    normalOTHours     = 0,
+    normalOTAmount    = 0,
+    secondOffOTAmount = 0,
+    totalOTAmount     = 0,
   } = summary || {};
 
   const progressPct = useMemo(
@@ -166,7 +170,7 @@ export default function Dashboard({
           </div>
 
           {/* ── 2nd Off OT Card ────────────────────────────────────────── */}
-          <div className="bg-cyan-500/10 rounded-xl p-3.5 border border-cyan-500/20 mb-4 flex items-center justify-between">
+          <div className="bg-cyan-500/10 rounded-xl p-3.5 border border-cyan-500/20 mb-2.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0 shadow-inner">
                 <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,18 +178,39 @@ export default function Dashboard({
                 </svg>
               </div>
               <div>
-                <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mb-0.5">2nd Off OT Hours</p>
-                <p className="text-xl font-extrabold tracking-tight text-cyan-300 leading-none">
-                  {secondOffOTHours.toFixed(1)}
-                  <span className="text-xs font-medium text-cyan-500/80 ml-1">hrs</span>
-                </p>
+                <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mb-0.5">2nd Off OT</p>
+                <div className="flex items-end gap-2">
+                  <p className="text-xl font-extrabold tracking-tight text-cyan-300 leading-none">
+                    {secondOffOTHours.toFixed(1)}
+                    <span className="text-xs font-medium text-cyan-500/80 ml-1">hrs</span>
+                  </p>
+                  <p className="text-[10px] font-bold text-cyan-200 bg-cyan-500/20 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                    Rs. {secondOffOTAmount.toLocaleString()}
+                  </p>
+                </div>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mb-0.5">2nd Off OT Days</p>
+              <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mb-0.5">Days</p>
               <p className="text-xl font-extrabold tracking-tight text-cyan-300 leading-none">
                 {secondOffOTDays}
-                <span className="text-xs font-medium text-cyan-500/80 ml-1">days</span>
+              </p>
+            </div>
+          </div>
+
+          {/* ── Financial Summary Card ─────────────────────────────────── */}
+          <div className="bg-gradient-to-r from-brand-900/40 to-emerald-900/30 rounded-xl p-3.5 border border-emerald-500/20 mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-brand-300/80 uppercase tracking-wide mb-0.5">Normal OT ({normalOTHours.toFixed(1)}h)</p>
+              <p className="text-lg font-extrabold tracking-tight text-brand-300 leading-none">
+                Rs. {normalOTAmount.toLocaleString()}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-emerald-400/80 uppercase tracking-wide mb-0.5">Total OT Amount</p>
+              <p className="text-2xl font-extrabold tracking-tight text-emerald-400 leading-none drop-shadow-md">
+                <span className="text-sm text-emerald-500/80 mr-1">Rs.</span>
+                {totalOTAmount.toLocaleString()}
               </p>
             </div>
           </div>

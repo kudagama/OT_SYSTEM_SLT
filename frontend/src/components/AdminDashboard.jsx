@@ -430,18 +430,55 @@ function EmployeeDetail({ user, records, allRecords, schedule, loading, filterYe
       </div>
 
       {/* This month 2nd Off stats — only if any */}
-      {monthSecondOff.length > 0 && (
-        <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5 mb-3">
-          <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">This Month 2nd Off OT</p>
-          <div className="flex items-end gap-2">
-            <p className="text-base font-extrabold text-cyan-300 leading-none">
-              {fmt(monthSecondOff.reduce((s, r) => s + (r.otHours || 0), 0))}
-              <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
-            </p>
-            <p className="text-[10px] text-cyan-500 mb-0.5">{monthSecondOff.length} occurrences</p>
+      {monthSecondOff.length > 0 && (() => {
+        const adminSecondOffHours = monthSecondOff.reduce((s, r) => s + (r.otHours || 0), 0);
+        const adminSecondOffAmount = adminSecondOffHours * 250;
+        return (
+          <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-xl p-2.5 mb-3">
+            <p className="text-[9px] text-cyan-400 uppercase tracking-wide font-bold mb-0.5">This Month 2nd Off OT</p>
+            <div className="flex items-end gap-2">
+              <p className="text-base font-extrabold text-cyan-300 leading-none">
+                {fmt(adminSecondOffHours)}
+                <span className="text-[10px] font-medium text-dark-400 ml-0.5">hrs</span>
+              </p>
+              <p className="text-[9px] font-bold text-cyan-200 bg-cyan-500/20 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                Rs. {adminSecondOffAmount.toLocaleString()}
+              </p>
+              <p className="text-[10px] text-cyan-500 mb-0.5 ml-auto">{monthSecondOff.length} occurrences</p>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* Financial Summary */}
+      {(() => {
+        const adminSecondOffHours = monthSecondOff.reduce((s, r) => s + (r.otHours || 0), 0);
+        const adminSecondOffAmount = adminSecondOffHours * 250;
+        const adminNormalHours = monthOTHours - adminSecondOffHours;
+        const adminNormalAmount = adminNormalHours * 200;
+        const adminTotalAmount = adminNormalAmount + adminSecondOffAmount;
+
+        if (monthOTHours > 0) {
+          return (
+            <div className="bg-gradient-to-r from-brand-900/30 to-emerald-900/20 border border-emerald-500/20 rounded-xl p-2.5 mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-[9px] text-brand-300/80 uppercase tracking-wide mb-0.5">Normal OT ({fmt(adminNormalHours)}h)</p>
+                <p className="text-sm font-extrabold text-brand-300 leading-none">
+                  Rs. {adminNormalAmount.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] text-emerald-400/80 uppercase tracking-wide mb-0.5">Total Amount</p>
+                <p className="text-lg font-extrabold text-emerald-400 leading-none drop-shadow-md">
+                  <span className="text-[10px] text-emerald-500/80 mr-1">Rs.</span>
+                  {adminTotalAmount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {/* Month navigator */}
       <div className="flex items-center gap-2 mb-3">

@@ -201,7 +201,12 @@ export default function App() {
     const secondOffOTHours  = allDays.reduce((s, d) => s + (d.shiftType === '2nd Off' ? d.otHours : 0), 0);
     const secondOffOTDays   = allDays.reduce((s, d) => s + ((d.shiftType === '2nd Off' && d.otHours > 0) ? 1 : 0), 0);
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, secondOffOTHours, secondOffOTDays };
+    const normalOTHours     = totalOTHours - secondOffOTHours;
+    const normalOTAmount    = normalOTHours * 200;
+    const secondOffOTAmount = secondOffOTHours * 250;
+    const totalOTAmount     = normalOTAmount + secondOffOTAmount;
+
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount };
   }, [records, schedule, selYear, selMonth]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
