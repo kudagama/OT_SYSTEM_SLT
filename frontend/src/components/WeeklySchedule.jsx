@@ -30,13 +30,14 @@ function shortShift(shift) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fully controlled — schedule state lives in App.jsx
-// Props: schedule, saving, onSetShift(dateKey, shiftType), onClearShift(dateKey)
+// Props: schedule, shiftChanges, saving, onSetShift(dateKey, shiftType, previousShift?), onClearShift(dateKey)
 // ─────────────────────────────────────────────────────────────────────────────
-export default function WeeklySchedule({ schedule = {}, saving = false, onSetShift, onClearShift, selYear, selMonth, onMonthChange, onSelectDay }) {
+export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, saving = false, onSetShift, onClearShift, selYear, selMonth, onMonthChange, onSelectDay }) {
   const today     = useMemo(() => new Date(), []);
   const todayKey  = toKey(today);
 
   const [pickerDay,   setPickerDay]   = useState(null);
+  const [pickerMode,  setPickerMode]  = useState(null); // 'edit' | 'change'
   const [viewDay,     setViewDay]     = useState(null);
   const [refDate,     setRefDate]     = useState(today);
 
@@ -123,9 +124,10 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
       {/* Day cards */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
         {displayDates.map((date, idx) => {
-          const key     = toKey(date);
-          const shift   = schedule[key];
-          const colors  = shift ? (SHIFT_COLORS[shift] || { bg: 'bg-slate-500/15', text: 'text-slate-300', border: 'border-slate-500/30' }) : null;
+          const key       = toKey(date);
+          const shift     = schedule[key];
+          const prevShift = shiftChanges[key];
+          const colors    = shift ? (SHIFT_COLORS[shift] || { bg: 'bg-slate-500/15', text: 'text-slate-300', border: 'border-slate-500/30' }) : null;
           const isToday = key === todayKey;
           const isPast  = date < today && !isToday;
 
@@ -133,8 +135,12 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
             <button
               key={key}
               onClick={() => {
-                if (shift) setViewDay(key);
-                else setPickerDay(key);
+                if (shift) {
+                  setViewDay(key);
+                } else {
+                  setPickerDay(key);
+                  setPickerMode('edit');
+                }
                 if (onSelectDay) onSelectDay(key);
               }}
               className={`
@@ -159,12 +165,19 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
                 {date.getDate()}
               </span>
               {shift ? (
-                <span className={`
-                  text-[9px] font-bold leading-tight text-center px-1 py-0.5 rounded-md
-                  border ${colors.bg} ${colors.text} ${colors.border} w-full truncate
-                `}>
-                  {shortShift(shift)}
-                </span>
+                <div className="flex flex-col items-center gap-0.5 w-full">
+                  {prevShift && (
+                    <span className="text-[8px] text-dark-400 line-through leading-none truncate w-full text-center">
+                      {shortShift(prevShift)}
+                    </span>
+                  )}
+                  <span className={`
+                    text-[9px] font-bold leading-tight text-center px-1 py-0.5 rounded-md
+                    border ${colors.bg} ${colors.text} ${colors.border} w-full truncate
+                  `}>
+                    {shortShift(shift)}
+                  </span>
+                </div>
               ) : (
                 <span className="text-[11px] text-dark-500 leading-none">＋</span>
               )}
@@ -178,9 +191,21 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
         <ShiftPicker
           dateKey={pickerDay}
           current={schedule[pickerDay]}
-          onSelect={(shift) => { onSetShift(pickerDay, shift); setPickerDay(null); }}
-          onClear={() => { onClearShift(pickerDay); setPickerDay(null); }}
-          onClose={() => setPickerDay(null)}
+          isChangeMode={pickerMode === 'change'}
+          onSelect={(shift) => { 
+            onSetShift(pickerDay, shift, pickerMode === 'change' ? schedule[pickerDay] : null); 
+            setPickerDay(null); 
+            setPickerMode(null);
+          }}
+          onClear={() => { 
+            onClearShift(pickerDay); 
+            setPickerDay(null); 
+            setPickerMode(null);
+          }}
+          onClose={() => {
+            setPickerDay(null);
+            setPickerMode(null);
+          }}
         />
       )}
 
@@ -189,7 +214,9 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
         <ShiftViewer
           dateKey={viewDay}
           shift={schedule[viewDay]}
-          onEdit={() => { setPickerDay(viewDay); setViewDay(null); }}
+          prevShift={shiftChanges[viewDay]}
+          onEdit={() => { setPickerDay(viewDay); setPickerMode('edit'); setViewDay(null); }}
+          onLogChange={() => { setPickerDay(viewDay); setPickerMode('change'); setViewDay(null); }}
           onClose={() => setViewDay(null)}
         />
       )}
@@ -198,7 +225,7 @@ export default function WeeklySchedule({ schedule = {}, saving = false, onSetShi
 }
 
 // ── Shift viewer bottom sheet ─────────────────────────────────────────────────
-function ShiftViewer({ dateKey, shift, onEdit, onClose }) {
+function ShiftViewer({ dateKey, shift, prevShift, onEdit, onLogChange, onClose }) {
   const dateObj = useMemo(() => {
     const [y, m, d] = dateKey.split('-').map(Number);
     return new Date(y, m - 1, d);
@@ -235,16 +262,30 @@ function ShiftViewer({ dateKey, shift, onEdit, onClose }) {
           </div>
 
           <div className="px-5 pb-5 pt-2">
+            {prevShift && (
+              <div className="mb-2 flex items-center justify-center gap-2 text-xs">
+                <span className="text-dark-400 line-through">{prevShift}</span>
+                <span className="text-brand-400">→</span>
+              </div>
+            )}
             <div className={`p-5 rounded-2xl border mb-5 flex items-center justify-center text-center ${colors.bg} ${colors.border}`}>
               <p className={`text-lg font-extrabold ${colors.text}`}>{shift}</p>
             </div>
             
-            <button
-              onClick={onEdit}
-              className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 transition-all duration-150 shadow-lg shadow-brand-500/25"
-            >
-              Edit Shift
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={onLogChange}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 transition-all duration-150 shadow-lg shadow-violet-500/25"
+              >
+                Log Shift Change
+              </button>
+              <button
+                onClick={onEdit}
+                className="w-full py-2.5 rounded-xl text-xs font-semibold text-dark-200 bg-dark-700 hover:bg-dark-600 border border-dark-600 hover:border-dark-500 transition-all duration-150"
+              >
+                Edit / Fix Mistake
+              </button>
+            </div>
           </div>
 
         </div>
@@ -254,7 +295,7 @@ function ShiftViewer({ dateKey, shift, onEdit, onClose }) {
 }
 
 // ── Shift picker bottom sheet ─────────────────────────────────────────────────
-function ShiftPicker({ dateKey, current, onSelect, onClear, onClose }) {
+function ShiftPicker({ dateKey, current, isChangeMode, onSelect, onClear, onClose }) {
   const dateObj = useMemo(() => {
     const [y, m, d] = dateKey.split('-').map(Number);
     return new Date(y, m - 1, d);
@@ -279,8 +320,13 @@ function ShiftPicker({ dateKey, current, onSelect, onClear, onClose }) {
           </div>
           <div className="flex items-center justify-between px-5 py-3 border-b border-dark-600">
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-dark-400 font-semibold">Set shift for</p>
+              <p className="text-[10px] uppercase tracking-widest text-dark-400 font-semibold">
+                {isChangeMode ? 'Select new shift for' : 'Set shift for'}
+              </p>
               <p className="text-sm font-bold text-white">{label}</p>
+              {isChangeMode && current && (
+                <p className="text-[10px] text-brand-300 mt-0.5">Changing from: {current}</p>
+              )}
             </div>
             <button onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg
@@ -292,7 +338,11 @@ function ShiftPicker({ dateKey, current, onSelect, onClear, onClose }) {
           <div className="p-3 grid grid-cols-1 gap-1.5 max-h-72 overflow-y-auto overscroll-contain">
             {getAvailableShiftTypes(dateKey).map((shift) => {
               const colors   = SHIFT_COLORS[shift] || {};
-              const selected = current === shift;
+              const selected = !isChangeMode && current === shift;
+              
+              // In change mode, if the shift is the current shift, maybe disable it or just show it differently?
+              // We'll let them click it if they changed their mind, which would just overwrite with the same shift.
+              
               return (
                 <button
                   key={shift}
@@ -320,7 +370,7 @@ function ShiftPicker({ dateKey, current, onSelect, onClear, onClose }) {
             })}
           </div>
 
-          {current && (
+          {current && !isChangeMode && (
             <div className="px-3 pb-4 pt-1">
               <button
                 onClick={onClear}

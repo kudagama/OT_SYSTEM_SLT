@@ -74,7 +74,7 @@ router.get('/users/:id/schedule', async (req, res) => {
   try {
     const Schedule = require('../models/Schedule');
     const schedule = await Schedule.findOne({ userId: req.params.id });
-    res.json({ success: true, data: schedule ? schedule.entries : {} });
+    res.json({ success: true, data: schedule ? schedule.entries : {}, shiftChanges: schedule ? schedule.shiftChanges : {} });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

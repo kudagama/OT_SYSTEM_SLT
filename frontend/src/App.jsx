@@ -24,6 +24,7 @@ export default function App() {
   const [hydrating, setHydrating]     = useState(!!getStoredToken()); // show spinner on startup
   const [records, setRecords]         = useState([]);
   const [schedule, setSchedule]       = useState({});   // { "YYYY-MM-DD": "shiftType" }
+  const [shiftChanges, setShiftChanges] = useState({}); // { "YYYY-MM-DD": "previousShiftType" }
   const [loadingRec, setLoadingRec]   = useState(true);
   const [schedSaving, setSchedSaving] = useState(false);
   const [editRecord, setEditRecord]   = useState(null);
@@ -96,6 +97,7 @@ export default function App() {
     try {
       const res = await api.getSchedule();
       setSchedule(res.entries || {});
+      setShiftChanges(res.shiftChanges || {});
     } catch { /* non-critical — summary still works from records */ }
   }, []);
 
@@ -134,24 +136,32 @@ export default function App() {
   }, [user, fetchRecords, fetchSchedule]);
 
   // ── Schedule mutations (lifted from WeeklySchedule) ───────────────────────
-  const handleSetShift = useCallback(async (dateKey, shiftType) => {
+  const handleSetShift = useCallback(async (dateKey, shiftType, previousShift = null) => {
     setSchedule((prev) => ({ ...prev, [dateKey]: shiftType })); // optimistic
+    if (previousShift) {
+      setShiftChanges((prev) => ({ ...prev, [dateKey]: previousShift }));
+    } else {
+      setShiftChanges((prev) => { const n = { ...prev }; delete n[dateKey]; return n; });
+    }
     setSchedSaving(true);
     try {
-      const res = await api.setScheduleDay(dateKey, { shiftType });
+      const res = await api.setScheduleDay(dateKey, { shiftType, previousShift });
       setSchedule(res.entries || {});
+      setShiftChanges(res.shiftChanges || {});
       fetchRecords(); // To pick up any auto-generated OT
     } catch {
-      setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; }); // revert
+      fetchSchedule(); // revert
     } finally { setSchedSaving(false); }
-  }, [fetchRecords]);
+  }, [fetchRecords, fetchSchedule]);
 
   const handleClearShift = useCallback(async (dateKey) => {
     setSchedule((prev) => { const n = { ...prev }; delete n[dateKey]; return n; });
+    setShiftChanges((prev) => { const n = { ...prev }; delete n[dateKey]; return n; });
     setSchedSaving(true);
     try {
       const res = await api.deleteScheduleDay(dateKey);
       setSchedule(res.entries || {});
+      setShiftChanges(res.shiftChanges || {});
       fetchRecords(); // To remove any auto-generated OT
     } catch {
       fetchSchedule(); // revert
@@ -214,7 +224,7 @@ export default function App() {
 
   function handleLogout() {
     localStorage.removeItem('ot_token');    // only the token — no ot_user to clean
-    setUser(null); setRecords([]); setSchedule({});
+    setUser(null); setRecords([]); setSchedule({}); setShiftChanges({});
     setEditRecord(null); setError(null);
   }
 
@@ -341,6 +351,7 @@ export default function App() {
         {/* Weekly shift schedule — fully controlled by App */}
         <WeeklySchedule
           schedule={schedule}
+          shiftChanges={shiftChanges}
           saving={schedSaving}
           onSetShift={handleSetShift}
           onClearShift={handleClearShift}

@@ -18,7 +18,7 @@ async function getOrCreate(userId) {
 router.get('/', async (req, res) => {
   try {
     const doc = await Schedule.findOne({ userId: req.user.id });
-    res.json({ success: true, entries: doc ? doc.entries : {} });
+    res.json({ success: true, entries: doc ? doc.entries : {}, shiftChanges: doc ? doc.shiftChanges : {} });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 router.put('/:dateKey', async (req, res) => {
   try {
     const { dateKey } = req.params;
-    const { shiftType } = req.body;
+    const { shiftType, previousShift } = req.body;
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
       return res.status(400).json({ success: false, message: 'Invalid date key. Use YYYY-MM-DD.' });
@@ -38,11 +38,18 @@ router.put('/:dateKey', async (req, res) => {
       return res.status(400).json({ success: false, message: 'shiftType is required.' });
     }
 
+    const updateQuery = { $set: { [`entries.${dateKey}`]: shiftType } };
+    if (previousShift) {
+      updateQuery.$set[`shiftChanges.${dateKey}`] = previousShift;
+    } else {
+      updateQuery.$unset = { [`shiftChanges.${dateKey}`]: '' };
+    }
+
     // Use findOneAndUpdate with $set on the Mixed field sub-key
     // Then re-fetch to guarantee the returned entries are fresh
     await Schedule.findOneAndUpdate(
       { userId: req.user.id },
-      { $set: { [`entries.${dateKey}`]: shiftType } },
+      updateQuery,
       { upsert: true }
     );
 
@@ -72,7 +79,7 @@ router.put('/:dateKey', async (req, res) => {
 
     // Refetch to get the authoritative state
     const doc = await Schedule.findOne({ userId: req.user.id });
-    res.json({ success: true, entries: doc ? doc.entries : {} });
+    res.json({ success: true, entries: doc ? doc.entries : {}, shiftChanges: doc ? doc.shiftChanges : {} });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -85,7 +92,7 @@ router.delete('/:dateKey', async (req, res) => {
 
     await Schedule.findOneAndUpdate(
       { userId: req.user.id },
-      { $unset: { [`entries.${dateKey}`]: '' } }
+      { $unset: { [`entries.${dateKey}`]: '', [`shiftChanges.${dateKey}`]: '' } }
     );
 
     // Also delete any auto-generated OT record
@@ -96,7 +103,7 @@ router.delete('/:dateKey', async (req, res) => {
     });
 
     const doc = await Schedule.findOne({ userId: req.user.id });
-    res.json({ success: true, entries: doc ? doc.entries : {} });
+    res.json({ success: true, entries: doc ? doc.entries : {}, shiftChanges: doc ? doc.shiftChanges : {} });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -107,7 +114,7 @@ router.delete('/', async (req, res) => {
   try {
     await Schedule.findOneAndUpdate(
       { userId: req.user.id },
-      { $set: { entries: {} } },
+      { $set: { entries: {}, shiftChanges: {} } },
       { upsert: true }
     );
 
@@ -116,7 +123,7 @@ router.delete('/', async (req, res) => {
       userId: req.user.id,
       notes: '[Auto] 1-10 Shift OT'
     });
-    res.json({ success: true, entries: {} });
+    res.json({ success: true, entries: {}, shiftChanges: {} });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
