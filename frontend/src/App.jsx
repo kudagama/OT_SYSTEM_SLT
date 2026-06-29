@@ -205,7 +205,10 @@ export default function App() {
     const totalOTHours      = allDays.reduce((s, d) => s + d.otHours, 0);
     const totalOTDays       = monthRecords.length;
     const totalShiftHours   = allDays.reduce((s, d) => s + getShiftDurationHours(d.shiftType), 0);
-    const totalShiftDays    = allDays.length;                     // unique days with any activity
+    const totalShiftDays    = allDays.reduce((s, d) => {
+      if (d.shiftType === 'Duty Leave' || d.shiftType === 'Training') return s;
+      return s + 1;
+    }, 0); // unique days with any activity (excluding Training/Duty Leave)
     const totalWorkingHours = totalShiftHours + totalOTHours;
 
     const secondOffOTHours  = allDays.reduce((s, d) => s + (d.shiftType === '2nd Off' ? d.otHours : 0), 0);
