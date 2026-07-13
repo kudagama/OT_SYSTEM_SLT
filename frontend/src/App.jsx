@@ -283,9 +283,9 @@ export default function App() {
   return (
     <div className="min-h-dvh bg-dark-900">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-dark-900/90 backdrop-blur-md border-b border-dark-700"
+      <header className="sticky top-0 z-40 bg-dark-900/50 backdrop-blur-xl border-b border-white/5 shadow-sm"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
@@ -319,69 +319,77 @@ export default function App() {
       </header>
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
-      <main className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-safe">
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-safe">
         {error && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-300 text-sm animate-fade-in">
-            <span className="text-lg">⚠️</span>
+          <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-300 text-sm animate-fade-in shadow-lg shadow-red-500/10">
+            <span className="text-xl">⚠️</span>
             <div>
-              <p className="font-semibold">Connection Error</p>
-              <p className="text-xs text-red-400">{error} — Is the backend running?</p>
+              <p className="font-semibold text-red-200">Connection Error</p>
+              <p className="text-xs text-red-400 mt-0.5">{error} — Is the backend running?</p>
             </div>
-            <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-200">✕</button>
+            <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-200 p-2 hover:bg-red-500/20 rounded-lg transition-colors">✕</button>
           </div>
         )}
 
-        <Dashboard
-          summary={summary}
-          loading={loadingRec}
-          selYear={selYear}
-          selMonth={selMonth}
-          isCurrentMonth={isCurrentMonth}
-          onPrev={goToPrevMonth}
-          onNext={goToNextMonth}
-          onPrevYear={goToPrevYear}
-          onNextYear={goToNextYear}
-          onToday={goToToday}
-        />
+        {/* ── Top Section: Dashboard & Form ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start mb-6 lg:mb-8">
+          {/* Left: Dashboard & Announcements */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Dashboard
+              summary={summary}
+              loading={loadingRec}
+              selYear={selYear}
+              selMonth={selMonth}
+              isCurrentMonth={isCurrentMonth}
+              onPrev={goToPrevMonth}
+              onNext={goToNextMonth}
+              onPrevYear={goToPrevYear}
+              onNextYear={goToNextYear}
+              onToday={goToToday}
+            />
 
-        {/* OT Announcements Section — shown when active slots exist */}
-        <OTAnnouncementsSection
-          announcements={announcements}
-          onAnnouncementsChange={setAnnouncements}
-          userSchedule={schedule}
-        />
+            <OTAnnouncementsSection
+              announcements={announcements}
+              onAnnouncementsChange={setAnnouncements}
+              userSchedule={schedule}
+            />
+          </div>
 
-        {/* Weekly shift schedule — fully controlled by App */}
-        <WeeklySchedule
-          schedule={schedule}
-          shiftChanges={shiftChanges}
-          saving={schedSaving}
-          onSetShift={handleSetShift}
-          onClearShift={handleClearShift}
-          selYear={selYear}
-          selMonth={selMonth}
-          onMonthChange={(y, m) => { setSelYear(y); setSelMonth(m); }}
-          onSelectDay={setSelectedOTDate}
-        />
+          {/* Right: Form */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <OTForm
+              onSaved={handleSaved}
+              editRecord={editRecord}
+              onCancelEdit={() => setEditRecord(null)}
+              schedule={schedule}
+              selectedDate={selectedOTDate}
+            />
+          </div>
+        </div>
 
-        {/* OT Entry Form */}
-        <OTForm
-          onSaved={handleSaved}
-          editRecord={editRecord}
-          onCancelEdit={() => setEditRecord(null)}
-          schedule={schedule}
-          selectedDate={selectedOTDate}
-        />
+        {/* ── Bottom Section: Calendar & History (Half & Half) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+          <WeeklySchedule
+            schedule={schedule}
+            shiftChanges={shiftChanges}
+            saving={schedSaving}
+            onSetShift={handleSetShift}
+            onClearShift={handleClearShift}
+            selYear={selYear}
+            selMonth={selMonth}
+            onMonthChange={(y, m) => { setSelYear(y); setSelMonth(m); }}
+            onSelectDay={setSelectedOTDate}
+          />
 
-        {/* History */}
-        <OTHistory
-          records={records}
-          loading={loadingRec}
-          filterYear={selYear}
-          filterMonth={selMonth}
-          onEdit={(record) => { setEditRecord(record); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          onDelete={handleDelete}
-        />
+          <OTHistory
+            records={records}
+            loading={loadingRec}
+            filterYear={selYear}
+            filterMonth={selMonth}
+            onEdit={(record) => { setEditRecord(record); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onDelete={handleDelete}
+          />
+        </div>
       </main>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}

@@ -167,7 +167,7 @@ export default function OTHistory({ records, loading, onEdit, onDelete, filterYe
         />
       )}
 
-      <div className="glass-card p-5 animate-slide-up">
+      <div className="glass-card p-5 animate-slide-up h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -198,7 +198,7 @@ export default function OTHistory({ records, loading, onEdit, onDelete, filterYe
             <p className="text-sm text-dark-400 mt-1">Use the arrows above to navigate months.</p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-5 max-h-[400px] overflow-y-auto pr-2 flex-1">
             {grouped.map(([monthLabel, items]) => {
               const monthTotal = items.reduce((s, r) => s + (r.otHours || 0), 0);
               return (

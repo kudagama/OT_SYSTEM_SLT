@@ -150,9 +150,9 @@ export default function AdminDashboard({ adminUser, onLogout }) {
     <div className="min-h-dvh bg-dark-900">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-dark-900/90 backdrop-blur-md border-b border-dark-700"
+      <header className="sticky top-0 z-40 bg-dark-900/50 backdrop-blur-xl border-b border-white/5 shadow-sm"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500
                             flex items-center justify-center shadow-lg shadow-amber-500/30">
@@ -182,7 +182,7 @@ export default function AdminDashboard({ adminUser, onLogout }) {
       </header>
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
-      <main className="max-w-2xl mx-auto px-4 py-5 space-y-4">
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-safe">
 
         {/* Global Stats bar */}
         {loading ? (
@@ -198,118 +198,132 @@ export default function AdminDashboard({ adminUser, onLogout }) {
           </div>
         )}
 
-        {/* Announcements Panel */}
-        <AnnouncementsPanel
-          announcements={announcements}
-          showForm={showAnnForm}
-          onToggleForm={() => { setShowAnnForm((v) => !v); setAnnError(''); }}
-          form={annForm}
-          onFormChange={(field, val) => setAnnForm((f) => ({ ...f, [field]: val }))}
-          onSubmit={handleCreateAnnouncement}
-          onDelete={handleDeleteAnnouncement}
-          saving={annSaving}
-          error={annError}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mt-6">
+          <div className="flex flex-col gap-6">
+            {/* Announcements Panel */}
+            <AnnouncementsPanel
+              announcements={announcements}
+              showForm={showAnnForm}
+              onToggleForm={() => { setShowAnnForm((v) => !v); setAnnError(''); }}
+              form={annForm}
+              onFormChange={(field, val) => setAnnForm((f) => ({ ...f, [field]: val }))}
+              onSubmit={handleCreateAnnouncement}
+              onDelete={handleDeleteAnnouncement}
+              saving={annSaving}
+              error={annError}
+            />
+          </div>
 
-        {/* Employee List Panel */}
-        <div className="glass-card p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-base">👥</span>
-              <h2 className="text-sm font-bold text-white">Employees</h2>
-              <span className="text-[10px] font-bold text-dark-400 bg-dark-700 border border-dark-600
-                               px-2 py-0.5 rounded-full">
-                {filteredUsers.length}
-              </span>
+          <div className="flex flex-col gap-6">
+            {/* Employee List Panel */}
+            <div className="glass-card p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">👥</span>
+                  <h2 className="text-sm font-bold text-white">Employees</h2>
+                  <span className="text-[10px] font-bold text-dark-400 bg-dark-700 border border-dark-600
+                                   px-2 py-0.5 rounded-full">
+                    {filteredUsers.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Search */}
+              <input
+                type="search"
+                placeholder="Search name, ID or email…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input-field mb-3 text-sm"
+              />
+
+              {/* List */}
+              {loading ? (
+                <div className="space-y-2 animate-pulse">
+                  {[...Array(5)].map((_, i) => <div key={i} className="h-14 bg-dark-700 rounded-xl" />)}
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <p className="text-xs text-dark-400 text-center py-4">No employees found.</p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => setSelected(u)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left
+                        transition-all duration-150 active:scale-[.99]
+                        ${selected?.id === u.id
+                          ? 'bg-brand-500/10 border-brand-500/40 ring-1 ring-brand-500/20'
+                          : 'bg-dark-700/40 border-dark-600 hover:bg-dark-700/80 hover:border-dark-500'
+                        }`}
+                    >
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600
+                                      flex items-center justify-center shrink-0 shadow-sm">
+                        <span className="text-white text-xs font-extrabold">
+                          {u.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+                        </span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-sm font-semibold text-white truncate">{u.name}</p>
+                          <span className="text-[10px] font-bold text-brand-300 font-mono
+                                           bg-brand-500/10 border border-brand-500/20
+                                           px-1.5 py-0.5 rounded shrink-0">
+                            {u.employeeId}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-dark-400 truncate mt-0.5">{u.email}</p>
+                        <p className="text-[10px] text-dark-500 mt-0.5">
+                          Joined {u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </p>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <p className="text-sm font-bold text-violet-300">{fmt(u.totalOTHours)}h</p>
+                        <p className="text-[10px] text-dark-400">{u.totalEntries} days</p>
+                        {u.secondOffEntries > 0 && (
+                          <span className="inline-block text-[9px] font-bold text-cyan-300
+                                           bg-cyan-500/10 border border-cyan-500/25 px-1.5 py-0.5 rounded">
+                            2nd Off ×{u.secondOffEntries}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Search */}
-          <input
-            type="search"
-            placeholder="Search name, ID or email…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-field mb-3 text-sm"
-          />
-
-          {/* List */}
-          {loading ? (
-            <div className="space-y-2 animate-pulse">
-              {[...Array(5)].map((_, i) => <div key={i} className="h-14 bg-dark-700 rounded-xl" />)}
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <p className="text-xs text-dark-400 text-center py-4">No employees found.</p>
-          ) : (
-            <div className="space-y-2">
-              {filteredUsers.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => setSelected(u)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left
-                    transition-all duration-150 active:scale-[.99]
-                    ${selected?.id === u.id
-                      ? 'bg-brand-500/10 border-brand-500/40 ring-1 ring-brand-500/20'
-                      : 'bg-dark-700/40 border-dark-600 hover:bg-dark-700/80 hover:border-dark-500'
-                    }`}
-                >
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600
-                                  flex items-center justify-center shrink-0 shadow-sm">
-                    <span className="text-white text-xs font-extrabold">
-                      {u.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
-                    </span>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-sm font-semibold text-white truncate">{u.name}</p>
-                      <span className="text-[10px] font-bold text-brand-300 font-mono
-                                       bg-brand-500/10 border border-brand-500/20
-                                       px-1.5 py-0.5 rounded shrink-0">
-                        {u.employeeId}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-dark-400 truncate mt-0.5">{u.email}</p>
-                    <p className="text-[10px] text-dark-500 mt-0.5">
-                      Joined {u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </p>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="text-right shrink-0 space-y-0.5">
-                    <p className="text-sm font-bold text-violet-300">{fmt(u.totalOTHours)}h</p>
-                    <p className="text-[10px] text-dark-400">{u.totalEntries} days</p>
-                    {u.secondOffEntries > 0 && (
-                      <span className="inline-block text-[9px] font-bold text-cyan-300
-                                       bg-cyan-500/10 border border-cyan-500/25 px-1.5 py-0.5 rounded">
-                        2nd Off ×{u.secondOffEntries}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col gap-6 sticky top-24">
+            {/* ── Employee Detail Panel ───────────────────────────────────── */}
+            {selected ? (
+              <EmployeeDetail
+                user={selected}
+                records={monthRecords}
+                allRecords={userRecords}
+                schedule={userSchedule}
+                loading={recLoading}
+                filterYear={filterYear}
+                filterMonth={filterMonth}
+                onYearChange={setFilterYear}
+                onMonthChange={setFilterMonth}
+                monthOTHours={monthOTHours}
+                onClose={() => setSelected(null)}
+              />
+            ) : (
+              <div className="glass-card p-8 flex flex-col items-center justify-center text-center border-dashed border-2 border-dark-600/50 min-h-[300px]">
+                <span className="text-4xl mb-4 opacity-30">👤</span>
+                <p className="text-dark-300 text-sm font-medium">Select an employee</p>
+                <p className="text-dark-500 text-xs mt-2">Choose an employee from the list to view their detailed OT records and schedule.</p>
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* ── Employee Detail Panel ───────────────────────────────────── */}
-        {selected && (
-          <EmployeeDetail
-            user={selected}
-            records={monthRecords}
-            allRecords={userRecords}
-            schedule={userSchedule}
-            loading={recLoading}
-            filterYear={filterYear}
-            filterMonth={filterMonth}
-            onYearChange={setFilterYear}
-            onMonthChange={setFilterMonth}
-            monthOTHours={monthOTHours}
-            onClose={() => setSelected(null)}
-          />
-        )}
       </main>
     </div>
   );

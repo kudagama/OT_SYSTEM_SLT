@@ -3,15 +3,37 @@ import { SHIFT_TYPES, SHIFT_COLORS, getAvailableShiftTypes } from '../constants'
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function getWeekDates(refDate = new Date()) {
-  const d   = new Date(refDate);
-  const dow = d.getDay();
-  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(d);
-    day.setDate(d.getDate() + i);
-    return day;
-  });
+function getMonthDates(refDate = new Date()) {
+  const y = refDate.getFullYear();
+  const m = refDate.getMonth();
+  
+  const firstDay = new Date(y, m, 1);
+  const lastDay = new Date(y, m + 1, 0);
+  
+  const dates = [];
+  
+  // Padding for previous month (Mon-Sun)
+  let firstDow = firstDay.getDay(); 
+  if (firstDow === 0) firstDow = 7;
+  
+  for (let i = firstDow - 1; i > 0; i--) {
+    dates.push({ date: new Date(y, m, 1 - i), isCurrentMonth: false });
+  }
+  
+  // Current month
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    dates.push({ date: new Date(y, m, i), isCurrentMonth: true });
+  }
+  
+  // Padding for next month
+  const remaining = dates.length % 7;
+  if (remaining !== 0) {
+    for (let i = 1; i <= 7 - remaining; i++) {
+      dates.push({ date: new Date(y, m + 1, i), isCurrentMonth: false });
+    }
+  }
+  
+  return dates;
 }
 
 function toKey(date) {
@@ -41,9 +63,8 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
   const [viewDay,     setViewDay]     = useState(null);
   const [refDate,     setRefDate]     = useState(today);
 
-  const handleNav = (daysToAdd) => {
-    const next = new Date(refDate);
-    next.setDate(next.getDate() + daysToAdd);
+  const handleNav = (monthsToAdd) => {
+    const next = new Date(refDate.getFullYear(), refDate.getMonth() + monthsToAdd, 1);
     setRefDate(next);
     if (onMonthChange) onMonthChange(next.getFullYear(), next.getMonth() + 1);
   };
@@ -65,18 +86,15 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
   }, [selYear, selMonth]); // intentionally NOT including refDate in dependencies
 
   const displayDates = useMemo(() => {
-    return getWeekDates(refDate);
+    return getMonthDates(refDate);
   }, [refDate]);
 
   const weekLabel = useMemo(() => {
-    const first = displayDates[0];
-    const last  = displayDates[6];
-    const opts  = { day: 'numeric', month: 'short' };
-    return `${first.toLocaleDateString('en-GB', opts)} – ${last.toLocaleDateString('en-GB', opts)}`;
-  }, [displayDates]);
+    return refDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  }, [refDate]);
 
   return (
-    <div className="glass-card p-4 sm:p-5 animate-slide-up">
+    <div className="glass-card p-4 sm:p-5 animate-slide-up h-full flex flex-col">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -86,7 +104,7 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
             📅
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-dark-300">My Week</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-dark-300">My Month</p>
             <p className="text-sm font-semibold text-white leading-tight">{weekLabel}</p>
           </div>
         </div>
@@ -98,7 +116,7 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
           )}
-          <button onClick={() => handleNav(-7)} className="btn-icon" title="Previous week">
+          <button onClick={() => handleNav(-1)} className="btn-icon" title="Previous month">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -113,7 +131,7 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
             Today
           </button>
           
-          <button onClick={() => handleNav(7)} className="btn-icon" title="Next week">
+          <button onClick={() => handleNav(1)} className="btn-icon" title="Next month">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -121,9 +139,18 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
         </div>
       </div>
 
-      {/* Day cards */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
-        {displayDates.map((date, idx) => {
+      {/* Day labels header */}
+      <div className="grid grid-cols-7 gap-1.5 mb-2 mt-1">
+        {DAY_LABELS.map((label) => (
+          <div key={label} className="text-center text-[10px] font-bold uppercase tracking-widest text-dark-400">
+            {label}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1.5 flex-1">
+        {displayDates.map(({ date, isCurrentMonth }, idx) => {
           const key       = toKey(date);
           const shift     = schedule[key];
           const prevShift = shiftChanges[key];
@@ -144,43 +171,41 @@ export default function WeeklySchedule({ schedule = {}, shiftChanges = {}, savin
                 if (onSelectDay) onSelectDay(key);
               }}
               className={`
-                flex flex-col items-center shrink-0 snap-start
-                w-[calc((100%-6*0.5rem)/7)] min-w-[44px] max-w-[64px]
-                rounded-xl border py-2.5 px-1 gap-1.5
-                transition-all duration-150 active:scale-95
+                flex flex-col items-center justify-start rounded-xl border py-1.5 px-0.5 gap-1
+                transition-all duration-150 active:scale-95 h-full min-h-[64px]
                 ${isToday
                   ? 'border-brand-500/60 bg-brand-500/10 ring-1 ring-brand-500/30'
                   : isPast
                     ? 'border-dark-600/60 bg-dark-700/30 opacity-60'
                     : 'border-dark-600 bg-dark-700/40 hover:bg-dark-700/70 hover:border-dark-500'
                 }
+                ${!isCurrentMonth ? 'opacity-30' : ''}
               `}
             >
-              <span className={`text-[10px] font-bold uppercase tracking-wide leading-none
-                ${isToday ? 'text-brand-300' : 'text-dark-400'}`}>
-                {DAY_LABELS[idx]}
-              </span>
-              <span className={`text-base font-extrabold leading-none
+              <span className={`text-sm font-extrabold leading-none mt-1
                 ${isToday ? 'text-white' : isPast ? 'text-dark-400' : 'text-dark-200'}`}>
                 {date.getDate()}
               </span>
-              {shift ? (
-                <div className="flex flex-col items-center gap-0.5 w-full">
-                  {prevShift && (
-                    <span className="text-[8px] text-dark-400 line-through leading-none truncate w-full text-center">
-                      {shortShift(prevShift)}
+              
+              <div className="w-full px-0.5 mt-auto mb-0.5 flex flex-col items-center gap-0.5">
+                {shift ? (
+                  <>
+                    {prevShift && (
+                      <span className="text-[7px] text-dark-400 line-through leading-none truncate w-full text-center">
+                        {shortShift(prevShift)}
+                      </span>
+                    )}
+                    <span className={`
+                      text-[8px] sm:text-[9px] font-bold leading-tight text-center px-0.5 py-[2px] rounded-md
+                      border ${colors.bg} ${colors.text} ${colors.border} w-full truncate
+                    `}>
+                      {shortShift(shift)}
                     </span>
-                  )}
-                  <span className={`
-                    text-[9px] font-bold leading-tight text-center px-1 py-0.5 rounded-md
-                    border ${colors.bg} ${colors.text} ${colors.border} w-full truncate
-                  `}>
-                    {shortShift(shift)}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-[11px] text-dark-500 leading-none">＋</span>
-              )}
+                  </>
+                ) : (
+                  <span className="text-[10px] text-dark-500 leading-none py-[3px]">＋</span>
+                )}
+              </div>
             </button>
           );
         })}
