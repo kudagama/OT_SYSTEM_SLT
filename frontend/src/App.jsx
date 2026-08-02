@@ -207,9 +207,11 @@ export default function App() {
     const totalOTDays       = monthRecords.length;
     const totalShiftHours   = allDays.reduce((s, d) => s + getShiftDurationHours(d.shiftType), 0);
     const totalShiftDays    = allDays.reduce((s, d) => {
-      if (d.shiftType === 'Duty Leave' || d.shiftType === 'Training') return s;
+      if (!d.shiftType) return s;
+      const t = d.shiftType;
+      if (t.includes('Leave') || t.includes('Off') || t === 'Training' || t === 'Custom') return s;
       return s + 1;
-    }, 0); // unique days with any activity (excluding Training/Duty Leave)
+    }, 0);
     const totalWorkingHours = totalShiftHours + totalOTHours;
 
     const totalCalls        = allDays.reduce((s, d) => s + (d.callCount || 0), 0);
@@ -224,6 +226,21 @@ export default function App() {
 
     return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount };
   }, [records, schedule, selYear, selMonth]);
+
+  const leaveStats = useMemo(() => {
+    let sick = 0, casual = 0, annual = 0, half = 0;
+    if (!schedule) return { sick, casual, annual, half };
+    
+    Object.entries(schedule).forEach(([dateStr, shiftType]) => {
+      if (dateStr.startsWith(String(selYear))) {
+        if (shiftType === 'Sick Leave') sick++;
+        else if (shiftType === 'Casual Leave') casual++;
+        else if (shiftType === 'Annual Leave') annual++;
+        else if (shiftType === 'Half Day Leave') half++;
+      }
+    });
+    return { sickTaken: sick, casualTaken: casual, annualTaken: annual, halfTaken: half };
+  }, [schedule, selYear]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   function handleAuth(loggedInUser) { setUser(loggedInUser); }
@@ -341,7 +358,9 @@ export default function App() {
           <div className="lg:col-span-2 flex flex-col gap-6">
             <Dashboard
               summary={summary}
+              leaveStats={leaveStats}
               loading={loadingRec}
+              user={user}
               selYear={selYear}
               selMonth={selMonth}
               isCurrentMonth={isCurrentMonth}

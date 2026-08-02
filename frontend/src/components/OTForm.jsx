@@ -56,7 +56,7 @@ function checkIsOffDay(shiftType) {
   if (!shiftType) return false;
   // Night Off is a continuation of the 16h shift, requiring 8h regular work.
   if (shiftType === 'Night Off') return false; 
-  return shiftType.includes('Off') || shiftType === 'Custom';
+  return shiftType.includes('Off') || shiftType.includes('Leave') || shiftType === 'Custom';
 }
 
 function calcOT(start, end, shiftType) {

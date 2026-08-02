@@ -10,6 +10,12 @@ const SHIFT_TYPES = [
   '1st Off',
   '2nd Off',
   'Night Off',
+  'Duty Leave',
+  'Annual Leave',
+  'Casual Leave',
+  'Sick Leave',
+  'Half Day Leave',
+  'Training',
   'Custom',
 ];
 

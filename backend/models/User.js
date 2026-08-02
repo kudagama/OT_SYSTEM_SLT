@@ -33,6 +33,14 @@ const UserSchema = new mongoose.Schema(
       enum:    ['user', 'admin'],
       default: 'user',
     },
+    casualLeaveAllowance: {
+      type: Number,
+      default: 0,
+    },
+    sickLeaveAllowance: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

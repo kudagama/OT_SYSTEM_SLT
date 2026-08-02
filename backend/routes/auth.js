@@ -36,7 +36,15 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, employeeId: user.employeeId, email: user.email, role: user.role },
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        employeeId: user.employeeId, 
+        email: user.email, 
+        role: user.role,
+        casualLeaveAllowance: user.casualLeaveAllowance,
+        sickLeaveAllowance: user.sickLeaveAllowance 
+      },
     });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -76,7 +84,15 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, employeeId: user.employeeId, email: user.email, role: user.role },
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        employeeId: user.employeeId, 
+        email: user.email, 
+        role: user.role,
+        casualLeaveAllowance: user.casualLeaveAllowance,
+        sickLeaveAllowance: user.sickLeaveAllowance 
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -86,15 +102,32 @@ router.post('/login', async (req, res) => {
 // ─── GET /api/auth/me ─────────────────────────────────────────────────────────
 // Validate token & return current user info
 const authMiddleware = require('../middleware/auth');
-router.get('/me', authMiddleware, (req, res) => {
-  res.json({ success: true, user: req.user });
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ 
+      success: true, 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        employeeId: user.employeeId, 
+        email: user.email, 
+        role: user.role,
+        casualLeaveAllowance: user.casualLeaveAllowance,
+        sickLeaveAllowance: user.sickLeaveAllowance 
+      } 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // ─── PUT /api/auth/profile ────────────────────────────────────────────────────
 // Update name and/or employeeId (email & password unchanged here)
 router.put('/profile', authMiddleware, async (req, res) => {
   try {
-    const { name, employeeId } = req.body;
+    const { name, employeeId, casualLeaveAllowance, sickLeaveAllowance } = req.body;
     const userId = req.user.id;
 
     if (!name || !name.trim()) {
@@ -117,6 +150,8 @@ router.put('/profile', authMiddleware, async (req, res) => {
       {
         name: name.trim(),
         ...(employeeId ? { employeeId: employeeId.trim().toUpperCase() } : {}),
+        ...(casualLeaveAllowance !== undefined ? { casualLeaveAllowance: parseInt(casualLeaveAllowance) || 0 } : {}),
+        ...(sickLeaveAllowance !== undefined ? { sickLeaveAllowance: parseInt(sickLeaveAllowance) || 0 } : {}),
       },
       { new: true, runValidators: true }
     );
@@ -131,7 +166,15 @@ router.put('/profile', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: updated._id, name: updated.name, employeeId: updated.employeeId, email: updated.email, role: updated.role },
+      user: { 
+        id: updated._id, 
+        name: updated.name, 
+        employeeId: updated.employeeId, 
+        email: updated.email, 
+        role: updated.role,
+        casualLeaveAllowance: updated.casualLeaveAllowance,
+        sickLeaveAllowance: updated.sickLeaveAllowance 
+      },
     });
   } catch (err) {
     if (err.name === 'ValidationError') {

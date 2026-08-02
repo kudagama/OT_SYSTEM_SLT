@@ -31,6 +31,7 @@ function StatTile({ label, value, unit, color = 'text-white', accent }) {
 
 export default function Dashboard({
   summary, loading,
+  leaveStats, user,
   selYear, selMonth, isCurrentMonth,
   onPrev, onNext, onPrevYear, onNextYear, onToday,
 }) {
@@ -167,6 +168,31 @@ export default function Dashboard({
               </p>
             </div>
           </div>
+
+          {/* ── Yearly Leave Balances ─────────────────────────────────── */}
+          {(user?.casualLeaveAllowance > 0 || user?.sickLeaveAllowance > 0 || leaveStats?.casualTaken > 0 || leaveStats?.sickTaken > 0) && (
+            <div className="bg-dark-700/40 rounded-xl p-3 border border-dark-600 mb-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-dark-400 mb-2 text-center">
+                {selYear} Leave Balances
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-dark-800/80 rounded-lg p-2 flex flex-col justify-center items-center">
+                  <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">Casual Leave</p>
+                  <div className="flex w-full justify-between px-1">
+                    <span className="text-[10px] text-dark-300">Taken: <span className="font-bold text-fuchsia-300">{leaveStats?.casualTaken || 0}</span></span>
+                    <span className="text-[10px] text-dark-300">Rem: <span className="font-bold text-white">{(user?.casualLeaveAllowance || 0) - (leaveStats?.casualTaken || 0)}</span></span>
+                  </div>
+                </div>
+                <div className="bg-dark-800/80 rounded-lg p-2 flex flex-col justify-center items-center">
+                  <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">Sick Leave</p>
+                  <div className="flex w-full justify-between px-1">
+                    <span className="text-[10px] text-dark-300">Taken: <span className="font-bold text-red-300">{leaveStats?.sickTaken || 0}</span></span>
+                    <span className="text-[10px] text-dark-300">Rem: <span className="font-bold text-white">{(user?.sickLeaveAllowance || 0) - (leaveStats?.sickTaken || 0)}</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── 2×2 grid: OT + Shift breakdown ───────────────────────── */}
           <div className="grid grid-cols-2 gap-2.5 mb-2.5">

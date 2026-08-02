@@ -9,7 +9,12 @@ export const SHIFT_TYPES = [
   '2nd Off',
   'Night Off',
   'Duty Leave',
+  'Annual Leave',
+  'Casual Leave',
+  'Sick Leave',
+  'Half Day Leave',
   'Training',
+  'Custom',
 ];
 
 export const SHIFT_COLORS = {
@@ -23,7 +28,12 @@ export const SHIFT_COLORS = {
   '2nd Off':             { bg: 'bg-cyan-500/15',   text: 'text-cyan-300',   border: 'border-cyan-500/30' },
   'Night Off':           { bg: 'bg-indigo-500/15', text: 'text-indigo-300', border: 'border-indigo-500/30' },
   'Duty Leave':          { bg: 'bg-pink-500/15',   text: 'text-pink-300',   border: 'border-pink-500/30' },
+  'Annual Leave':        { bg: 'bg-rose-500/15',   text: 'text-rose-300',   border: 'border-rose-500/30' },
+  'Casual Leave':        { bg: 'bg-fuchsia-500/15',text: 'text-fuchsia-300',border: 'border-fuchsia-500/30' },
+  'Sick Leave':          { bg: 'bg-red-500/15',    text: 'text-red-300',    border: 'border-red-500/30' },
+  'Half Day Leave':      { bg: 'bg-orange-500/15', text: 'text-orange-300', border: 'border-orange-500/30' },
   'Training':            { bg: 'bg-yellow-500/15', text: 'text-yellow-300', border: 'border-yellow-500/30' },
+  'Custom':              { bg: 'bg-gray-500/15',   text: 'text-gray-300',   border: 'border-gray-500/30' },
 };
 
 export function getAvailableShiftTypes(dateStr) {

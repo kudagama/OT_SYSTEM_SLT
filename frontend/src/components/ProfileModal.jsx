@@ -8,7 +8,12 @@ import { api } from '../api';
  */
 export default function ProfileModal({ user, records, onClose, onLogout, onProfileUpdate }) {
   const [editMode, setEditMode]       = useState(false);
-  const [form, setForm]               = useState({ name: user?.name || '', employeeId: user?.employeeId || '' });
+  const [form, setForm]               = useState({ 
+    name: user?.name || '', 
+    employeeId: user?.employeeId || '',
+    casualLeaveAllowance: user?.casualLeaveAllowance || 0,
+    sickLeaveAllowance: user?.sickLeaveAllowance || 0
+  });
   const [errors, setErrors]           = useState({});
   const [saving, setSaving]           = useState(false);
   const [apiError, setApiError]       = useState('');
@@ -41,7 +46,12 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
 
   // ── Edit helpers ──────────────────────────────────────────────────────────
   function enterEdit() {
-    setForm({ name: user?.name || '', employeeId: user?.employeeId || '' });
+    setForm({ 
+      name: user?.name || '', 
+      employeeId: user?.employeeId || '',
+      casualLeaveAllowance: user?.casualLeaveAllowance || 0,
+      sickLeaveAllowance: user?.sickLeaveAllowance || 0
+    });
     setErrors({}); setApiError(''); setSaveSuccess(false);
     setEditMode(true);
   }
@@ -58,6 +68,8 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
     const e = {};
     if (!form.name.trim())       e.name       = 'Name is required.';
     if (!form.employeeId.trim()) e.employeeId = 'Employee ID is required.';
+    if (form.casualLeaveAllowance < 0) e.casualLeaveAllowance = 'Cannot be negative.';
+    if (form.sickLeaveAllowance < 0) e.sickLeaveAllowance = 'Cannot be negative.';
     return e;
   }
 
@@ -67,7 +79,12 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true); setApiError('');
     try {
-      const res = await api.updateProfile({ name: form.name.trim(), employeeId: form.employeeId.trim() });
+      const res = await api.updateProfile({ 
+        name: form.name.trim(), 
+        employeeId: form.employeeId.trim(),
+        casualLeaveAllowance: form.casualLeaveAllowance,
+        sickLeaveAllowance: form.sickLeaveAllowance
+      });
       localStorage.setItem('ot_token', res.token);
       localStorage.setItem('ot_user',  JSON.stringify(res.user));
       onProfileUpdate(res.user);
@@ -184,6 +201,28 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
                 <InfoRow icon="📅" label="Member Since" value={memberSince} />
               </div>
 
+              {/* Leave Limits */}
+              <div className="px-5 py-4 space-y-4 border-b border-dark-600">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-dark-400">
+                    Yearly Leave Limits
+                  </p>
+                  <button onClick={enterEdit} className="text-[10px] text-brand-400 font-bold hover:underline">
+                    Edit Limits
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-dark-700/40 rounded-lg p-2.5 border border-dark-600">
+                    <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">Casual Leave</p>
+                    <p className="text-xl font-bold text-fuchsia-300">{user?.casualLeaveAllowance || 0}</p>
+                  </div>
+                  <div className="bg-dark-700/40 rounded-lg p-2.5 border border-dark-600">
+                    <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">Sick Leave</p>
+                    <p className="text-xl font-bold text-red-300">{user?.sickLeaveAllowance || 0}</p>
+                  </div>
+                </div>
+              </div>
+
               {/* All-time stats */}
               <div className="px-5 py-4 border-b border-dark-600">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-dark-400 mb-3">
@@ -271,6 +310,42 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
                   className={`input-field uppercase ${errors.employeeId ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
                 {errors.employeeId && <p className="text-xs text-red-400 mt-1">{errors.employeeId}</p>}
+              </div>
+
+              {/* Allowances */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="edit-casual-leave"
+                    className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
+                    Casual Leave Limit
+                  </label>
+                  <input
+                    id="edit-casual-leave"
+                    type="number"
+                    name="casualLeaveAllowance"
+                    value={form.casualLeaveAllowance}
+                    onChange={handleChange}
+                    min="0"
+                    className={`input-field ${errors.casualLeaveAllowance ? 'border-red-500 focus:border-red-500' : ''}`}
+                  />
+                  {errors.casualLeaveAllowance && <p className="text-xs text-red-400 mt-1">{errors.casualLeaveAllowance}</p>}
+                </div>
+                <div>
+                  <label htmlFor="edit-sick-leave"
+                    className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
+                    Sick Leave Limit
+                  </label>
+                  <input
+                    id="edit-sick-leave"
+                    type="number"
+                    name="sickLeaveAllowance"
+                    value={form.sickLeaveAllowance}
+                    onChange={handleChange}
+                    min="0"
+                    className={`input-field ${errors.sickLeaveAllowance ? 'border-red-500 focus:border-red-500' : ''}`}
+                  />
+                  {errors.sickLeaveAllowance && <p className="text-xs text-red-400 mt-1">{errors.sickLeaveAllowance}</p>}
+                </div>
               </div>
 
               {/* Email — read-only */}
