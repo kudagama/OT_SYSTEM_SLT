@@ -191,8 +191,9 @@ export default function App() {
       const key = new Date(r.date).toISOString().split('T')[0]; // YYYY-MM-DD (UTC)
       if (dayMap[key]) {
         dayMap[key].otHours += r.otHours || 0;
+        dayMap[key].callCount = (dayMap[key].callCount || 0) + (r.callCount || 0);
       } else {
-        dayMap[key] = { otHours: r.otHours || 0, shiftType: r.shiftType };
+        dayMap[key] = { otHours: r.otHours || 0, shiftType: r.shiftType, callCount: r.callCount || 0 };
       }
     });
     // Add schedule days that have no OT record
@@ -211,6 +212,8 @@ export default function App() {
     }, 0); // unique days with any activity (excluding Training/Duty Leave)
     const totalWorkingHours = totalShiftHours + totalOTHours;
 
+    const totalCalls        = allDays.reduce((s, d) => s + (d.callCount || 0), 0);
+
     const secondOffOTHours  = allDays.reduce((s, d) => s + (d.shiftType === '2nd Off' ? d.otHours : 0), 0);
     const secondOffOTDays   = allDays.reduce((s, d) => s + ((d.shiftType === '2nd Off' && d.otHours > 0) ? 1 : 0), 0);
 
@@ -219,7 +222,7 @@ export default function App() {
     const secondOffOTAmount = secondOffOTHours * 250;
     const totalOTAmount     = normalOTAmount + secondOffOTAmount;
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount };
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount };
   }, [records, schedule, selYear, selMonth]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -238,8 +241,9 @@ export default function App() {
   // ── Data handlers ─────────────────────────────────────────────────────────
   const handleSaved = useCallback(() => {
     fetchRecords();
+    fetchSchedule();
     setEditRecord(null);
-  }, [fetchRecords]);
+  }, [fetchRecords, fetchSchedule]);
 
   const handleDelete = useCallback(async (id) => {
     try {

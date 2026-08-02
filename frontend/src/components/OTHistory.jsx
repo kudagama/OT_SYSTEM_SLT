@@ -64,9 +64,16 @@ function OTCard({ record, onEdit, onDelete }) {
           <span className={`badge border ${colors.bg} ${colors.text} ${colors.border}`}>
             {record.shiftType}
           </span>
-          <span className="text-sm font-bold text-white">
-            {record.otHours}h
-            <span className="text-dark-300 font-normal text-xs ml-1">OT</span>
+          <span className="text-sm font-bold text-white flex items-center gap-2">
+            <span>
+              {record.otHours}h
+              <span className="text-dark-300 font-normal text-xs ml-1">OT</span>
+            </span>
+            {record.callCount > 0 && (
+              <span className="bg-brand-500/10 border border-brand-500/20 text-brand-300 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                📞 {record.callCount} calls
+              </span>
+            )}
           </span>
         </div>
         {/* Time range row — always visible */}

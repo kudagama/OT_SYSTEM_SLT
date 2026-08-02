@@ -20,13 +20,14 @@ async function getMonthlySummary(userId, year, month) {
         _id: null,
         totalOTHours: { $sum: '$otHours' },
         totalEntries: { $sum: 1 },
+        totalCalls:   { $sum: { $ifNull: ['$callCount', 0] } },
       },
     },
   ]);
 
   return result.length > 0
-    ? { totalOTHours: result[0].totalOTHours, totalEntries: result[0].totalEntries }
-    : { totalOTHours: 0, totalEntries: 0 };
+    ? { totalOTHours: result[0].totalOTHours, totalEntries: result[0].totalEntries, totalCalls: result[0].totalCalls }
+    : { totalOTHours: 0, totalEntries: 0, totalCalls: 0 };
 }
 
 // ─── GET /api/ot/summary?year=2025&month=6 ────────────────────────────────────
@@ -56,7 +57,7 @@ router.get('/', async (req, res) => {
 // ─── POST /api/ot ─────────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
-    const { date, shiftType, otStartTime, otEndTime, pearlLoginTime, pearlLogoutTime, otHours, notes } = req.body;
+    const { date, shiftType, otStartTime, otEndTime, pearlLoginTime, pearlLogoutTime, otHours, notes, callCount } = req.body;
 
     const record = new OTRecord({
       userId:      req.user.id,
@@ -68,6 +69,7 @@ router.post('/', async (req, res) => {
       pearlLogoutTime: pearlLogoutTime || '',
       otHours:         parseFloat(otHours),
       notes:           notes || '',
+      callCount:       parseInt(callCount) || 0,
     });
 
     const saved = await record.save();
@@ -84,7 +86,7 @@ router.post('/', async (req, res) => {
 // ─── PUT /api/ot/:id ──────────────────────────────────────────────────────────
 router.put('/:id', async (req, res) => {
   try {
-    const { date, shiftType, otStartTime, otEndTime, pearlLoginTime, pearlLogoutTime, otHours, notes } = req.body;
+    const { date, shiftType, otStartTime, otEndTime, pearlLoginTime, pearlLogoutTime, otHours, notes, callCount } = req.body;
 
     // Ensure the record belongs to the requesting user
     const existing = await OTRecord.findOne({ _id: req.params.id, userId: req.user.id });
@@ -103,6 +105,7 @@ router.put('/:id', async (req, res) => {
         pearlLogoutTime: pearlLogoutTime || '',
         otHours:         parseFloat(otHours),
         notes:           notes || '',
+        callCount:       parseInt(callCount) || 0,
       },
       { new: true, runValidators: true }
     );

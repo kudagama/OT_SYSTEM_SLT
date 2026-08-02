@@ -77,6 +77,23 @@ router.put('/:dateKey', async (req, res) => {
       });
     }
 
+    // Auto-create Night Off for the next day if 4:00 PM - 8:00 AM is selected
+    if (shiftType === '4:00 PM - 8:00 AM') {
+      const nextDate = new Date(dateKey);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
+      
+      const doc = await Schedule.findOne({ userId: req.user.id });
+      // Only set Night Off if the next day is empty
+      if (!doc || !doc.entries || !doc.entries[nextDateStr]) {
+        await Schedule.findOneAndUpdate(
+          { userId: req.user.id },
+          { $set: { [`entries.${nextDateStr}`]: 'Night Off' } },
+          { upsert: true }
+        );
+      }
+    }
+
     // Refetch to get the authoritative state
     const doc = await Schedule.findOne({ userId: req.user.id });
     res.json({ success: true, entries: doc ? doc.entries : {}, shiftChanges: doc ? doc.shiftChanges : {} });

@@ -40,6 +40,7 @@ export default function Dashboard({
     totalShiftHours   = 0,
     totalShiftDays    = 0,
     totalWorkingHours = 0,
+    totalCalls        = 0,
     secondOffOTHours  = 0,
     secondOffOTDays   = 0,
     normalOTHours     = 0,
@@ -150,6 +151,12 @@ export default function Dashboard({
               <p className="text-3xl font-extrabold tracking-tight text-white leading-none">
                 {totalWorkingHours.toFixed(1)}
                 <span className="text-sm font-medium text-dark-400 ml-1">hrs</span>
+              </p>
+            </div>
+            <div className="text-center border-l border-r border-dark-600 px-4 mx-2">
+              <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5">Total Calls</p>
+              <p className="text-2xl font-extrabold tracking-tight text-brand-400 leading-none">
+                {totalCalls}
               </p>
             </div>
             <div className="text-right">

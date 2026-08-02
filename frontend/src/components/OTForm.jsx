@@ -8,6 +8,7 @@ const EMPTY_FORM = {
   pearlLoginTime:  '',
   pearlLogoutTime: '',
   otHours:         '',
+  callCount:       '',
   notes:           '',
 };
 
@@ -51,6 +52,13 @@ function parseTimeToMinutes(timeStr) {
   return NaN;
 }
 
+function checkIsOffDay(shiftType) {
+  if (!shiftType) return false;
+  // Night Off is a continuation of the 16h shift, requiring 8h regular work.
+  if (shiftType === 'Night Off') return false; 
+  return shiftType.includes('Off') || shiftType === 'Custom';
+}
+
 function calcOT(start, end, shiftType) {
   if (!start || !end) return null;
   const startMins = parseTimeToMinutes(start);
@@ -63,7 +71,7 @@ function calcOT(start, end, shiftType) {
 
   // If it's an off day or custom, there are no regular working hours.
   // Otherwise, the regular working hours are 8 hours (480 minutes).
-  const isOffDay = shiftType && (shiftType.includes('Off') || shiftType === 'Custom');
+  const isOffDay = checkIsOffDay(shiftType);
   const regularMins = isOffDay ? 0 : 480;
 
   const otMins = totalMins - regularMins;
@@ -122,6 +130,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         pearlLoginTime:  editRecord.pearlLoginTime || '',
         pearlLogoutTime: editRecord.pearlLogoutTime || '',
         otHours:         editRecord.otHours ?? '',
+        callCount:       editRecord.callCount ?? '',
         notes:           editRecord.notes   || '',
       });
       setErrors({});
@@ -172,7 +181,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       // times provided — auto-calculated; ineligible (< 1h) saved as 0 hours
       // 24h cap: check calculated result
       const hrs = parseFloat(form.otHours) || 0;
-      const isOffDay = form.shiftType.includes('Off') || form.shiftType === 'Custom';
+      const isOffDay = checkIsOffDay(form.shiftType);
       const shiftH = isOffDay ? 0 : 8;
       if (hrs + shiftH >= 24) {
         e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
@@ -181,7 +190,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       e.otHours = 'Enter OT hours manually or pick a Pearl login & logout time.';
     } else {
       const hrs     = parseFloat(form.otHours);
-      const isOffDay = form.shiftType.includes('Off') || form.shiftType === 'Custom';
+      const isOffDay = checkIsOffDay(form.shiftType);
       const shiftH  = isOffDay ? 0 : 8;
       if (hrs < 0) {
         e.otHours = 'OT hours cannot be negative.';
@@ -237,13 +246,27 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       const payload = {
         ...form,
         otHours: parseFloat(form.otHours),
+        callCount: form.callCount === '' ? 0 : parseInt(form.callCount, 10),
       };
       if (isEditing) {
         await api.update(editRecord._id, payload);
         showToast('Record updated successfully!');
+        
+        // Auto Night Off logic for editing
+        if (payload.shiftType === '4:00 PM - 8:00 AM') {
+          await handleAutoNightOff(payload.date);
+        }
       } else {
         await api.create(payload);
-        showToast('OT entry saved!');
+        
+        // Auto Night Off logic for creation
+        if (payload.shiftType === '4:00 PM - 8:00 AM') {
+          await handleAutoNightOff(payload.date);
+          showToast('OT entry & tomorrow\'s Night Off saved!');
+        } else {
+          showToast('OT entry saved!');
+        }
+        
         setForm(EMPTY_FORM);
       }
       onSaved();
@@ -254,6 +277,39 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     }
   }
 
+  async function handleAutoNightOff(currentDateStr) {
+    try {
+      const nextDate = new Date(currentDateStr);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
+      
+      const existing = await api.getAll();
+      const hasRecord = existing.data.some(r => r.date.startsWith(nextDateStr));
+      
+      if (!hasRecord) {
+        // Create OT Record
+        await api.create({
+          date: nextDateStr,
+          shiftType: 'Night Off',
+          pearlLoginTime: '',
+          pearlLogoutTime: '',
+          otHours: 0,
+          callCount: 0,
+          notes: 'Auto-generated Night Off'
+        });
+      }
+      
+      // Also update the schedule so it appears in the calendar UI immediately
+      try {
+        await api.setScheduleDay(nextDateStr, { shiftType: 'Night Off' });
+      } catch (err) {
+        console.error('Failed to update schedule for Night Off:', err);
+      }
+    } catch (err) {
+      console.error('Failed to auto-create Night Off:', err);
+    }
+  }
+
   function handleCancel() {
     setForm(EMPTY_FORM);
     setErrors({});
@@ -261,7 +317,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   }
 
   // derived display for auto-calculated hours
-  const isOffDay      = form.shiftType.includes('Off') || form.shiftType === 'Custom';
+  const isOffDay      = checkIsOffDay(form.shiftType);
   const shiftDuration = isOffDay ? 0 : 8;
   const maxOT         = 24 - shiftDuration;                      // hard ceiling
   const autoCalced    = form.pearlLoginTime && form.pearlLogoutTime && form.otHours !== '';
@@ -466,6 +522,23 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
             }`}
           />
           {errors.otHours && <p className="text-xs text-red-400 mt-1">{errors.otHours}</p>}
+        </div>
+
+        {/* Call Count */}
+        <div>
+          <label htmlFor="ot-callcount" className="block text-xs font-semibold text-dark-200 mb-1.5 uppercase tracking-wide">
+            Call Count <span className="normal-case text-dark-400">(optional)</span>
+          </label>
+          <input
+            id="ot-callcount"
+            type="number"
+            name="callCount"
+            min="0"
+            placeholder="e.g. 25"
+            value={form.callCount}
+            onChange={handleChange}
+            className="input-field"
+          />
         </div>
 
         {/* Notes */}
