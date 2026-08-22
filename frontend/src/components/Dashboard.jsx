@@ -48,6 +48,7 @@ export default function Dashboard({
     normalOTAmount    = 0,
     secondOffOTAmount = 0,
     totalOTAmount     = 0,
+    prevMonthShortfall = 0,
   } = summary || {};
 
   const progressPct = useMemo(
@@ -63,7 +64,10 @@ export default function Dashboard({
   }, [selYear, selMonth]);
 
   const CALL_GOAL = 2000;
+  const combinedGoal = CALL_GOAL + prevMonthShortfall;
+  
   const callsRemaining = Math.max(0, CALL_GOAL - totalCalls);
+  const combinedCallsRemaining = Math.max(0, combinedGoal - totalCalls);
   
   const dailyCallsNeeded = useMemo(() => {
     if (!isCurrentMonth || !selYear || !selMonth) return 0;
@@ -73,6 +77,15 @@ export default function Dashboard({
     const remainingDays = totalDays - today + 1; // Include today
     return remainingDays > 0 ? Math.ceil(callsRemaining / remainingDays) : 0;
   }, [isCurrentMonth, selYear, selMonth, callsRemaining]);
+
+  const dailyCombinedNeeded = useMemo(() => {
+    if (!isCurrentMonth || !selYear || !selMonth || prevMonthShortfall === 0) return 0;
+    const now = new Date();
+    const today = now.getDate();
+    const totalDays = new Date(selYear, selMonth, 0).getDate();
+    const remainingDays = totalDays - today + 1; // Include today
+    return remainingDays > 0 ? Math.ceil(combinedCallsRemaining / remainingDays) : 0;
+  }, [isCurrentMonth, selYear, selMonth, combinedCallsRemaining, prevMonthShortfall]);
 
   const barColor =
     progressPct >= 100 ? 'bg-gradient-to-r from-emerald-500 to-green-400'
@@ -190,23 +203,47 @@ export default function Dashboard({
                 </p>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-extrabold text-brand-400 tracking-tight leading-none drop-shadow-sm">{totalCalls}</span>
-                  <span className="text-sm font-semibold text-dark-400">/ {CALL_GOAL}</span>
+                  <span className="text-sm font-semibold text-dark-400 flex items-center gap-1">
+                    / {CALL_GOAL} 
+                    {prevMonthShortfall > 0 && (
+                      <span className="text-fuchsia-400/80 text-[10px] bg-fuchsia-500/10 px-1.5 py-0.5 rounded border border-fuchsia-500/20">
+                        + {prevMonthShortfall} missed
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
               
               {isCurrentMonth && (
-                <div className="text-right">
+                <div className="flex flex-col items-end gap-1.5">
                   {callsRemaining > 0 ? (
                     <div className="flex flex-col items-end">
-                      <span className="text-[9px] text-dark-400 uppercase tracking-widest mb-0.5">Daily Needed</span>
-                      <span className="text-xs font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                        {dailyCallsNeeded} <span className="text-[9px] font-semibold text-amber-400/80 uppercase">calls</span>
+                      <span className="text-[9px] text-dark-400 uppercase tracking-widest mb-0.5">Base Target</span>
+                      <span className="text-xs font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm">
+                        {dailyCallsNeeded} <span className="text-[9px] font-semibold text-amber-400/80 uppercase">/ day</span>
                       </span>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm uppercase tracking-wider">
-                      <span>🎉</span> Reached
+                    <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm uppercase tracking-wider">
+                      <span>✓</span> Base Reached
                     </span>
+                  )}
+
+                  {prevMonthShortfall > 0 && (
+                    combinedCallsRemaining > 0 ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] text-fuchsia-400/80 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                          To Cover Shortfall
+                        </span>
+                        <span className="text-xs font-extrabold text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm">
+                          {dailyCombinedNeeded} <span className="text-[9px] font-semibold text-fuchsia-400/80 uppercase">/ day</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm uppercase tracking-wider">
+                        <span>🎉</span> All Cleared!
+                      </span>
+                    )
                   )}
                 </div>
               )}
@@ -216,11 +253,11 @@ export default function Dashboard({
             <div className="relative h-2 w-full bg-dark-800 rounded-full overflow-hidden z-10 border border-dark-600/50">
               <div 
                 className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out rounded-full ${
-                  callsRemaining === 0 
+                  combinedCallsRemaining === 0 
                     ? 'bg-gradient-to-r from-emerald-500 to-green-400' 
                     : 'bg-gradient-to-r from-brand-600 to-brand-400'
                 }`}
-                style={{ width: `${Math.min(100, (totalCalls / CALL_GOAL) * 100)}%` }}
+                style={{ width: `${Math.min(100, (totalCalls / combinedGoal) * 100)}%` }}
               />
             </div>
           </div>

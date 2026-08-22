@@ -23,6 +23,7 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
   const stats = useMemo(() => {
     const totalHours   = records.reduce((s, r) => s + (r.otHours || 0), 0);
     const totalDays    = records.length;
+    const totalCalls   = records.reduce((s, r) => s + (r.callCount || 0), 0);
     const uniqueMonths = new Set(
       records.map((r) => {
         const d = new Date(r.date);
@@ -30,7 +31,7 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
       })
     ).size;
     const avgPerMonth = uniqueMonths > 0 ? totalHours / uniqueMonths : 0;
-    return { totalHours, totalDays, uniqueMonths, avgPerMonth };
+    return { totalHours, totalDays, totalCalls, uniqueMonths, avgPerMonth };
   }, [records]);
 
   // ── Avatar initials ───────────────────────────────────────────────────────
@@ -226,13 +227,14 @@ export default function ProfileModal({ user, records, onClose, onLogout, onProfi
               {/* All-time stats */}
               <div className="px-5 py-4 border-b border-dark-600">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-dark-400 mb-3">
-                  All-Time OT Stats
+                  All-Time Stats
                 </p>
                 <div className="grid grid-cols-2 gap-2.5">
+                  <StatBox value={stats.totalCalls}             unit="calls"  label="Total Calls"   color="text-emerald-300" />
                   <StatBox value={stats.totalHours.toFixed(1)} unit="hrs"    label="Total OT"      color="text-brand-300" />
                   <StatBox value={stats.totalDays}              unit="days"   label="Days Logged"   color="text-violet-300" />
                   <StatBox value={stats.uniqueMonths}           unit="months" label="Active Months" color="text-teal-300" />
-                  <StatBox value={stats.avgPerMonth.toFixed(1)} unit="hrs"    label="Avg / Month"   color="text-amber-300" />
+                  <StatBox value={stats.avgPerMonth.toFixed(1)} unit="hrs"    label="Avg OT/Month"  color="text-amber-300" />
                 </div>
               </div>
 

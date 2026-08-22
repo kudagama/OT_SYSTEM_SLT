@@ -184,6 +184,39 @@ export default function App() {
       })
     );
 
+    // Calculate previous month's shortfall
+    let prevYear = selYear;
+    let prevMonth = selMonth - 1;
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear--;
+    }
+
+    const prevMonthRecords = records.filter((r) => {
+      const d = new Date(r.date);
+      return d.getUTCFullYear() === prevYear && d.getUTCMonth() + 1 === prevMonth;
+    });
+    const prevMonthSchedule = Object.entries(schedule).filter(([key]) => {
+      const [y, m] = key.split('-').map(Number);
+      return y === prevYear && m === prevMonth;
+    });
+
+    let prevMonthShortfall = 0;
+    // Only apply shortfall if the user was active last month
+    if (prevMonthRecords.length > 0 || prevMonthSchedule.length > 0) {
+      const prevDayMap = {};
+      prevMonthRecords.forEach((r) => {
+        const key = new Date(r.date).toISOString().split('T')[0];
+        if (prevDayMap[key]) {
+          prevDayMap[key].callCount += r.callCount || 0;
+        } else {
+          prevDayMap[key] = { callCount: r.callCount || 0 };
+        }
+      });
+      const prevTotalCalls = Object.values(prevDayMap).reduce((s, d) => s + d.callCount, 0);
+      prevMonthShortfall = Math.max(0, 2000 - prevTotalCalls);
+    }
+
     // Merge: dayMap[dateKey] = { otHours, shiftType }
     // OT records take priority for shiftType (authoritative)
     const dayMap = {};
@@ -234,7 +267,7 @@ export default function App() {
     const secondOffOTAmount = payableSecondOff * 250;
     const totalOTAmount     = normalOTAmount + secondOffOTAmount;
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount };
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, prevMonthShortfall };
   }, [records, schedule, selYear, selMonth]);
 
   const leaveStats = useMemo(() => {
