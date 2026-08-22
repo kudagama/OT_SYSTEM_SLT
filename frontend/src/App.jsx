@@ -220,8 +220,18 @@ export default function App() {
     const secondOffOTDays   = allDays.reduce((s, d) => s + ((d.shiftType === '2nd Off' && d.otHours > 0) ? 1 : 0), 0);
 
     const normalOTHours     = totalOTHours - secondOffOTHours;
-    const normalOTAmount    = normalOTHours * 200;
-    const secondOffOTAmount = secondOffOTHours * 250;
+    
+    // Cap total payable OT at 100 hours, prioritizing the higher-paying 2nd Off OT
+    let payableSecondOff = secondOffOTHours;
+    let payableNormal = normalOTHours;
+    
+    if (payableNormal + payableSecondOff > 100) {
+      payableSecondOff = Math.min(secondOffOTHours, 100);
+      payableNormal = Math.min(normalOTHours, 100 - payableSecondOff);
+    }
+
+    const normalOTAmount    = payableNormal * 200;
+    const secondOffOTAmount = payableSecondOff * 250;
     const totalOTAmount     = normalOTAmount + secondOffOTAmount;
 
     return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount };
