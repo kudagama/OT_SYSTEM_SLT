@@ -156,7 +156,7 @@ export default function Dashboard({
         </div>
       ) : (
         <>
-          {/* ── Total Working Hours — prominent single row ─────────────── */}
+          {/* ── Working Stats ─────────────── */}
           <div className="bg-gradient-to-r from-dark-700/80 to-dark-700/40 rounded-xl p-3.5
                           border border-dark-500 mb-2.5 flex items-center justify-between">
             <div>
@@ -165,25 +165,6 @@ export default function Dashboard({
                 {totalWorkingHours.toFixed(1)}
                 <span className="text-sm font-medium text-dark-400 ml-1">hrs</span>
               </p>
-            </div>
-            <div className="text-center border-l border-r border-dark-600 px-4 mx-2 flex-1">
-              <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5 flex items-center justify-center gap-1">
-                Total Calls
-                {isCurrentMonth && <span className="text-[9px] text-dark-500">/ {CALL_GOAL}</span>}
-              </p>
-              <p className="text-2xl font-extrabold tracking-tight text-brand-400 leading-none">
-                {totalCalls}
-              </p>
-              {isCurrentMonth && callsRemaining > 0 && (
-                <p className="text-[9px] font-bold text-amber-400/90 mt-1.5 uppercase tracking-wide leading-tight bg-amber-500/10 rounded-full px-1.5 py-0.5 border border-amber-500/20">
-                  Avg. {dailyCallsNeeded}/day needed
-                </p>
-              )}
-              {isCurrentMonth && callsRemaining === 0 && (
-                <p className="text-[9px] font-bold text-emerald-400/90 mt-1.5 uppercase tracking-wide leading-tight bg-emerald-500/10 rounded-full px-1.5 py-0.5 border border-emerald-500/20">
-                  Goal Reached!
-                </p>
-              )}
             </div>
             <div className="text-right">
               <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5">Working Days</p>
@@ -194,25 +175,124 @@ export default function Dashboard({
             </div>
           </div>
 
+          {/* ── Call Target Card ─────────────── */}
+          <div className="bg-dark-700/40 rounded-xl p-4 border border-brand-500/20 mb-2.5 relative overflow-hidden shadow-lg">
+            {/* Subtle glow effect */}
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-brand-500/10 blur-2xl rounded-full pointer-events-none" />
+            
+            <div className="flex justify-between items-end mb-3 relative z-10">
+              <div>
+                <p className="text-[10px] text-brand-300/80 uppercase tracking-widest mb-1 flex items-center gap-1.5 font-bold">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  Monthly Call Target
+                </p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-extrabold text-brand-400 tracking-tight leading-none drop-shadow-sm">{totalCalls}</span>
+                  <span className="text-sm font-semibold text-dark-400">/ {CALL_GOAL}</span>
+                </div>
+              </div>
+              
+              {isCurrentMonth && (
+                <div className="text-right">
+                  {callsRemaining > 0 ? (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[9px] text-dark-400 uppercase tracking-widest mb-0.5">Daily Needed</span>
+                      <span className="text-xs font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                        {dailyCallsNeeded} <span className="text-[9px] font-semibold text-amber-400/80 uppercase">calls</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm uppercase tracking-wider">
+                      <span>🎉</span> Reached
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Progress Bar */}
+            <div className="relative h-2 w-full bg-dark-800 rounded-full overflow-hidden z-10 border border-dark-600/50">
+              <div 
+                className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out rounded-full ${
+                  callsRemaining === 0 
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-400' 
+                    : 'bg-gradient-to-r from-brand-600 to-brand-400'
+                }`}
+                style={{ width: `${Math.min(100, (totalCalls / CALL_GOAL) * 100)}%` }}
+              />
+            </div>
+          </div>
+
           {/* ── Yearly Leave Balances ─────────────────────────────────── */}
           {(user?.casualLeaveAllowance > 0 || user?.sickLeaveAllowance > 0 || leaveStats?.casualTaken > 0 || leaveStats?.sickTaken > 0) && (
-            <div className="bg-dark-700/40 rounded-xl p-3 border border-dark-600 mb-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-dark-400 mb-2 text-center">
+            <div className="bg-dark-700/40 rounded-xl p-4 border border-fuchsia-500/10 mb-2.5 relative overflow-hidden shadow-lg">
+              {/* Subtle background glow */}
+              <div className="absolute -left-4 -top-4 w-24 h-24 bg-fuchsia-500/10 blur-2xl rounded-full pointer-events-none" />
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-red-500/10 blur-2xl rounded-full pointer-events-none" />
+
+              <p className="text-[10px] text-dark-300 uppercase tracking-widest mb-3 flex items-center gap-1.5 font-bold relative z-10">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
                 {selYear} Leave Balances
               </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-dark-800/80 rounded-lg p-2 flex flex-col justify-center items-center">
-                  <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">Casual Leave</p>
-                  <div className="flex w-full justify-between px-1">
-                    <span className="text-[10px] text-dark-300">Taken: <span className="font-bold text-fuchsia-300">{leaveStats?.casualTaken || 0}</span></span>
-                    <span className="text-[10px] text-dark-300">Rem: <span className="font-bold text-white">{(user?.casualLeaveAllowance || 0) - (leaveStats?.casualTaken || 0)}</span></span>
+
+              <div className="grid grid-cols-2 gap-3 relative z-10">
+                {/* Casual Leave */}
+                <div className="bg-dark-800/60 rounded-xl p-3 border border-fuchsia-500/20 shadow-inner">
+                  <p className="text-[10px] text-fuchsia-400/80 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    Casual
+                  </p>
+                  <div className="flex justify-between items-end mb-2">
+                    <div>
+                      <span className="text-[9px] text-dark-400 uppercase tracking-wide block mb-0.5">Remaining</span>
+                      <span className="text-2xl font-extrabold text-white leading-none drop-shadow-sm">
+                        {(user?.casualLeaveAllowance || 0) - (leaveStats?.casualTaken || 0)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] text-dark-400 uppercase tracking-wide block mb-0.5">Taken</span>
+                      <span className="text-lg font-bold text-fuchsia-400 leading-none">
+                        {leaveStats?.casualTaken || 0}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Mini Progress bar */}
+                  <div className="h-1.5 w-full bg-dark-900 rounded-full overflow-hidden border border-dark-700/50">
+                    <div 
+                      className="h-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-400 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, ((leaveStats?.casualTaken || 0) / Math.max(1, user?.casualLeaveAllowance || 1)) * 100)}%` }}
+                    />
                   </div>
                 </div>
-                <div className="bg-dark-800/80 rounded-lg p-2 flex flex-col justify-center items-center">
-                  <p className="text-[9px] text-dark-400 uppercase tracking-wide mb-1">Sick Leave</p>
-                  <div className="flex w-full justify-between px-1">
-                    <span className="text-[10px] text-dark-300">Taken: <span className="font-bold text-red-300">{leaveStats?.sickTaken || 0}</span></span>
-                    <span className="text-[10px] text-dark-300">Rem: <span className="font-bold text-white">{(user?.sickLeaveAllowance || 0) - (leaveStats?.sickTaken || 0)}</span></span>
+
+                {/* Sick Leave */}
+                <div className="bg-dark-800/60 rounded-xl p-3 border border-red-500/20 shadow-inner">
+                  <p className="text-[10px] text-red-400/80 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    Sick
+                  </p>
+                  <div className="flex justify-between items-end mb-2">
+                    <div>
+                      <span className="text-[9px] text-dark-400 uppercase tracking-wide block mb-0.5">Remaining</span>
+                      <span className="text-2xl font-extrabold text-white leading-none drop-shadow-sm">
+                        {(user?.sickLeaveAllowance || 0) - (leaveStats?.sickTaken || 0)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] text-dark-400 uppercase tracking-wide block mb-0.5">Taken</span>
+                      <span className="text-lg font-bold text-red-400 leading-none">
+                        {leaveStats?.sickTaken || 0}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Mini Progress bar */}
+                  <div className="h-1.5 w-full bg-dark-900 rounded-full overflow-hidden border border-dark-700/50">
+                    <div 
+                      className="h-full bg-gradient-to-r from-red-600 to-red-400 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, ((leaveStats?.sickTaken || 0) / Math.max(1, user?.sickLeaveAllowance || 1)) * 100)}%` }}
+                    />
                   </div>
                 </div>
               </div>
