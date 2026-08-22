@@ -70,9 +70,9 @@ function calcOT(start, end, shiftType) {
   const totalMins = adjustedEndMins - startMins;
 
   // If it's an off day or custom, there are no regular working hours.
-  // Otherwise, the regular working hours are 8 hours (480 minutes).
+  // Otherwise, the regular working hours are 8 hours (480 minutes), except Night Shift which is 16 hours (960 minutes).
   const isOffDay = checkIsOffDay(shiftType);
-  const regularMins = isOffDay ? 0 : 480;
+  const regularMins = isOffDay ? 0 : (shiftType === '4:00 PM - 8:00 AM' ? 960 : 480);
 
   const otMins = totalMins - regularMins;
 
@@ -182,7 +182,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       // 24h cap: check calculated result
       const hrs = parseFloat(form.otHours) || 0;
       const isOffDay = checkIsOffDay(form.shiftType);
-      const shiftH = isOffDay ? 0 : 8;
+      const shiftH = isOffDay ? 0 : (form.shiftType === '4:00 PM - 8:00 AM' ? 16 : 8);
       if (hrs + shiftH >= 24) {
         e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
       }
@@ -191,7 +191,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     } else {
       const hrs     = parseFloat(form.otHours);
       const isOffDay = checkIsOffDay(form.shiftType);
-      const shiftH  = isOffDay ? 0 : 8;
+      const shiftH  = isOffDay ? 0 : (form.shiftType === '4:00 PM - 8:00 AM' ? 16 : 8);
       if (hrs < 0) {
         e.otHours = 'OT hours cannot be negative.';
       } else if (hrs + shiftH >= 24) {
@@ -318,7 +318,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
 
   // derived display for auto-calculated hours
   const isOffDay      = checkIsOffDay(form.shiftType);
-  const shiftDuration = isOffDay ? 0 : 8;
+  const shiftDuration = isOffDay ? 0 : (form.shiftType === '4:00 PM - 8:00 AM' ? 16 : 8);
   const maxOT         = 24 - shiftDuration;                      // hard ceiling
   const autoCalced    = form.pearlLoginTime && form.pearlLogoutTime && form.otHours !== '';
   const otResult      = form._otResult || null;

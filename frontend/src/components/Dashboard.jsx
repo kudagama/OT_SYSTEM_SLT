@@ -62,6 +62,18 @@ export default function Dashboard({
     });
   }, [selYear, selMonth]);
 
+  const CALL_GOAL = 2000;
+  const callsRemaining = Math.max(0, CALL_GOAL - totalCalls);
+  
+  const dailyCallsNeeded = useMemo(() => {
+    if (!isCurrentMonth || !selYear || !selMonth) return 0;
+    const now = new Date();
+    const today = now.getDate();
+    const totalDays = new Date(selYear, selMonth, 0).getDate();
+    const remainingDays = totalDays - today + 1; // Include today
+    return remainingDays > 0 ? Math.ceil(callsRemaining / remainingDays) : 0;
+  }, [isCurrentMonth, selYear, selMonth, callsRemaining]);
+
   const barColor =
     progressPct >= 100 ? 'bg-gradient-to-r from-emerald-500 to-green-400'
     : progressPct >= 60 ? 'bg-gradient-to-r from-brand-500 to-indigo-400'
@@ -154,11 +166,24 @@ export default function Dashboard({
                 <span className="text-sm font-medium text-dark-400 ml-1">hrs</span>
               </p>
             </div>
-            <div className="text-center border-l border-r border-dark-600 px-4 mx-2">
-              <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5">Total Calls</p>
+            <div className="text-center border-l border-r border-dark-600 px-4 mx-2 flex-1">
+              <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5 flex items-center justify-center gap-1">
+                Total Calls
+                {isCurrentMonth && <span className="text-[9px] text-dark-500">/ {CALL_GOAL}</span>}
+              </p>
               <p className="text-2xl font-extrabold tracking-tight text-brand-400 leading-none">
                 {totalCalls}
               </p>
+              {isCurrentMonth && callsRemaining > 0 && (
+                <p className="text-[9px] font-bold text-amber-400/90 mt-1.5 uppercase tracking-wide leading-tight bg-amber-500/10 rounded-full px-1.5 py-0.5 border border-amber-500/20">
+                  Avg. {dailyCallsNeeded}/day needed
+                </p>
+              )}
+              {isCurrentMonth && callsRemaining === 0 && (
+                <p className="text-[9px] font-bold text-emerald-400/90 mt-1.5 uppercase tracking-wide leading-tight bg-emerald-500/10 rounded-full px-1.5 py-0.5 border border-emerald-500/20">
+                  Goal Reached!
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-[10px] text-dark-400 uppercase tracking-wide mb-0.5">Working Days</p>
