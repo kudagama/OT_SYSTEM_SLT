@@ -442,6 +442,7 @@ export default function App() {
               onCancelEdit={() => setEditRecord(null)}
               schedule={schedule}
               selectedDate={selectedOTDate}
+              records={records}
             />
           </div>
         </div>

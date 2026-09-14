@@ -137,15 +137,49 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     }
   }, [editRecord]);
 
-  const isEditing = Boolean(editRecord);
+  const isEditingProp = Boolean(editRecord);
+
+  // Find if there's an existing record for the currently selected date (when not explicitly editing via prop)
+  const matchedRecord = (!isEditingProp && form.date) 
+    ? records.find(r => r.date?.startsWith(form.date))
+    : null;
+
+  const isEditing = isEditingProp || Boolean(matchedRecord);
+  const activeRecordId = editRecord?._id || matchedRecord?._id;
+
+  // Auto-fill form if a matched record is found for the selected date
+  useEffect(() => {
+    if (isEditingProp || !matchedRecord) return;
+    
+    // We found a record for this date that isn't currently loaded into the form
+    // Let's populate it so the user can update it instead of creating a duplicate
+    // We only want to do this if the form hasn't already been populated with this record's data
+    // to prevent cursor jumping or infinite loops if they edit other fields
+    setForm(f => {
+      // If the form already has this record's otHours and notes, we assume it's already populated
+      if (f.otHours === matchedRecord.otHours && f.notes === (matchedRecord.notes || '')) {
+        return f;
+      }
+      return {
+        date:            matchedRecord.date?.split('T')[0] || form.date,
+        shiftType:       matchedRecord.shiftType || SHIFT_TYPES[0],
+        pearlLoginTime:  matchedRecord.pearlLoginTime || '',
+        pearlLogoutTime: matchedRecord.pearlLogoutTime || '',
+        otHours:         matchedRecord.otHours ?? '',
+        callCount:       matchedRecord.callCount ?? '',
+        notes:           matchedRecord.notes   || '',
+      };
+    });
+    setErrors({});
+  }, [matchedRecord, isEditingProp]);
 
   // Update form date when selectedDate prop changes (new entries only)
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditingProp) return;
     if (selectedDate) {
       setForm((f) => ({ ...f, date: selectedDate }));
     }
-  }, [selectedDate, isEditing]);
+  }, [selectedDate, isEditingProp]);
 
   // Auto-fill shiftType from weekly schedule when date is picked (new entries only)
   useEffect(() => {
@@ -249,7 +283,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         callCount: form.callCount === '' ? 0 : parseInt(form.callCount, 10),
       };
       if (isEditing) {
-        await api.update(editRecord._id, payload);
+        await api.update(activeRecordId, payload);
         showToast('Record updated successfully!');
         
         // Auto Night Off logic for editing
