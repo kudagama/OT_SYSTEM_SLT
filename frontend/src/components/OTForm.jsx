@@ -115,7 +115,7 @@ function getShiftDurationHours(shiftType) {
   return (e - s) / 60;
 }
 
-export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {}, selectedDate }) {
+export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {}, selectedDate, records = [] }) {
   const [form, setForm]       = useState(EMPTY_FORM);
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
@@ -147,20 +147,18 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   const isEditing = isEditingProp || Boolean(matchedRecord);
   const activeRecordId = editRecord?._id || matchedRecord?._id;
 
+  const [lastAutoFilledId, setLastAutoFilledId] = useState(null);
+
   // Auto-fill form if a matched record is found for the selected date
   useEffect(() => {
-    if (isEditingProp || !matchedRecord) return;
+    if (isEditingProp || !matchedRecord) {
+      if (!matchedRecord) setLastAutoFilledId(null);
+      return;
+    }
     
-    // We found a record for this date that isn't currently loaded into the form
-    // Let's populate it so the user can update it instead of creating a duplicate
-    // We only want to do this if the form hasn't already been populated with this record's data
-    // to prevent cursor jumping or infinite loops if they edit other fields
-    setForm(f => {
-      // If the form already has this record's otHours and notes, we assume it's already populated
-      if (f.otHours === matchedRecord.otHours && f.notes === (matchedRecord.notes || '')) {
-        return f;
-      }
-      return {
+    // If we haven't loaded this specific record yet, load it now
+    if (lastAutoFilledId !== matchedRecord._id) {
+      setForm({
         date:            matchedRecord.date?.split('T')[0] || form.date,
         shiftType:       matchedRecord.shiftType || SHIFT_TYPES[0],
         pearlLoginTime:  matchedRecord.pearlLoginTime || '',
@@ -168,10 +166,11 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         otHours:         matchedRecord.otHours ?? '',
         callCount:       matchedRecord.callCount ?? '',
         notes:           matchedRecord.notes   || '',
-      };
-    });
-    setErrors({});
-  }, [matchedRecord, isEditingProp]);
+      });
+      setErrors({});
+      setLastAutoFilledId(matchedRecord._id);
+    }
+  }, [matchedRecord, isEditingProp, lastAutoFilledId, form.date]);
 
   // Update form date when selectedDate prop changes (new entries only)
   useEffect(() => {
@@ -290,6 +289,9 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
         if (payload.shiftType === '4:00 PM - 8:00 AM') {
           await handleAutoNightOff(payload.date);
         }
+        
+        setForm(EMPTY_FORM);
+        setLastAutoFilledId(null);
       } else {
         await api.create(payload);
         
@@ -347,6 +349,7 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   function handleCancel() {
     setForm(EMPTY_FORM);
     setErrors({});
+    setLastAutoFilledId(null);
     if (onCancelEdit) onCancelEdit();
   }
 
