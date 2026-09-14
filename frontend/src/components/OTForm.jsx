@@ -207,11 +207,20 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.date, schedule]);
 
-  function validate() {
+    function validate() {
     const e = {};
     if (!form.date)      e.date = 'Date is required.';
     if (!form.shiftType) e.shiftType = 'Please select a shift type.';
+    
+    // Prevent logging times past midnight (next day), except exactly 12:00 AM (00:00).
+    // If Logout < Login, it means they crossed into the next day.
     if (form.pearlLoginTime && form.pearlLogoutTime) {
+      if (form.pearlLogoutTime < form.pearlLoginTime && form.pearlLogoutTime !== '00:00') {
+        e.pearlLogoutTime = 'Cannot select time past 12:00 AM. Please log the remainder on the next day.';
+      }
+    }
+
+    if (form.pearlLoginTime && form.pearlLogoutTime && !e.pearlLogoutTime) {
       // times provided — auto-calculated; ineligible (< 1h) saved as 0 hours
       // 24h cap: check calculated result
       const hrs = parseFloat(form.otHours) || 0;
@@ -220,9 +229,9 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
       if (hrs + shiftH >= 24) {
         e.otHours = `Total exceeds 24h — shift ${shiftH}h + OT ${hrs}h = ${shiftH + hrs}h. Max OT allowed: ${24 - shiftH}h.`;
       }
-    } else if (form.otHours === '' || form.otHours === null) {
+    } else if (!e.pearlLogoutTime && (form.otHours === '' || form.otHours === null)) {
       e.otHours = 'Enter OT hours manually or pick a Pearl login & logout time.';
-    } else {
+    } else if (!e.pearlLogoutTime) {
       const hrs     = parseFloat(form.otHours);
       const isOffDay = checkIsOffDay(form.shiftType);
       const shiftH  = isOffDay ? 0 : 8;
@@ -468,8 +477,9 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
                 name="pearlLogoutTime"
                 value={form.pearlLogoutTime}
                 onChange={handleChange}
-                className="input-field"
+                className={`input-field ${errors.pearlLogoutTime ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
               />
+              {errors.pearlLogoutTime && <p className="text-xs text-red-400 mt-1">{errors.pearlLogoutTime}</p>}
             </div>
           </div>
 
