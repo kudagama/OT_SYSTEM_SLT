@@ -219,7 +219,25 @@ export default function Dashboard({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>Last month to date:</span>
-                    <span className="text-brand-300 font-extrabold text-xs ml-0.5">{prevMonthCallsUpToToday}</span>
+                    <span className="text-brand-300 font-extrabold text-xs ml-0.5 mr-1">{prevMonthCallsUpToToday}</span>
+                    
+                    {(totalCalls - prevMonthCallsUpToToday) > 0 && (
+                      <span className="flex items-center text-emerald-400 font-bold bg-emerald-500/10 px-1 rounded">
+                        <svg className="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                        {totalCalls - prevMonthCallsUpToToday}
+                      </span>
+                    )}
+                    {(totalCalls - prevMonthCallsUpToToday) < 0 && (
+                      <span className="flex items-center text-red-400 font-bold bg-red-500/10 px-1 rounded">
+                        <svg className="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                        {Math.abs(totalCalls - prevMonthCallsUpToToday)}
+                      </span>
+                    )}
+                    {(totalCalls - prevMonthCallsUpToToday) === 0 && (
+                      <span className="flex items-center text-dark-400 font-bold bg-dark-700 px-1 rounded">
+                        -
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
