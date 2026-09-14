@@ -48,6 +48,8 @@ export default function Dashboard({
     normalOTAmount    = 0,
     secondOffOTAmount = 0,
     totalOTAmount     = 0,
+    nightShiftDays    = 0,
+    nightShiftAmount  = 0,
     prevMonthShortfall = 0,
     prevMonthCallsUpToToday = 0,
   } = summary || {};
@@ -401,6 +403,36 @@ export default function Dashboard({
             </div>
           </div>
 
+          {/* ── Night Shift Allowance Card ─────────────────────────────── */}
+          {nightShiftDays > 0 && (
+            <div className="bg-purple-500/10 rounded-xl p-3.5 border border-purple-500/20 mb-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0 shadow-inner">
+                  <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-[10px] text-purple-400/80 uppercase tracking-wide mb-0.5">Night Shift Allowance</p>
+                  <div className="flex items-end gap-2">
+                    <p className="text-xl font-extrabold tracking-tight text-purple-300 leading-none">
+                      Rs. {nightShiftAmount.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] font-bold text-purple-200 bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30">
+                      Rs. 600 / shift
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-purple-400/80 uppercase tracking-wide mb-0.5">Days</p>
+                <p className="text-xl font-extrabold tracking-tight text-purple-300 leading-none">
+                  {nightShiftDays}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ── Financial Summary Card ─────────────────────────────────── */}
           <div className="bg-gradient-to-r from-brand-900/40 to-emerald-900/30 rounded-xl p-3.5 border border-emerald-500/20 mb-4 flex items-center justify-between">
             <div>
@@ -410,10 +442,10 @@ export default function Dashboard({
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-emerald-400/80 uppercase tracking-wide mb-0.5">Total OT Amount</p>
+              <p className="text-[10px] text-emerald-400/80 uppercase tracking-wide mb-0.5">Total Expected Pay</p>
               <p className="text-2xl font-extrabold tracking-tight text-emerald-400 leading-none drop-shadow-md">
                 <span className="text-sm text-emerald-500/80 mr-1">Rs.</span>
-                {totalOTAmount.toLocaleString()}
+                {(totalOTAmount + nightShiftAmount).toLocaleString()}
               </p>
             </div>
           </div>
