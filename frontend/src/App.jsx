@@ -202,6 +202,9 @@ export default function App() {
     });
 
     let prevMonthShortfall = 0;
+    let prevMonthCallsUpToToday = 0;
+    const todayDateNum = new Date().getDate();
+
     // Only apply shortfall if the user was active last month
     if (prevMonthRecords.length > 0 || prevMonthSchedule.length > 0) {
       const prevDayMap = {};
@@ -210,10 +213,20 @@ export default function App() {
         if (prevDayMap[key]) {
           prevDayMap[key].callCount += r.callCount || 0;
         } else {
-          prevDayMap[key] = { callCount: r.callCount || 0 };
+          prevDayMap[key] = { 
+            callCount: r.callCount || 0,
+            dayOfMonth: new Date(r.date).getUTCDate() 
+          };
         }
       });
-      const prevTotalCalls = Object.values(prevDayMap).reduce((s, d) => s + d.callCount, 0);
+      
+      let prevTotalCalls = 0;
+      Object.values(prevDayMap).forEach((d) => {
+        prevTotalCalls += d.callCount;
+        if (d.dayOfMonth <= todayDateNum) {
+          prevMonthCallsUpToToday += d.callCount;
+        }
+      });
       prevMonthShortfall = Math.max(0, 2000 - prevTotalCalls);
     }
 
@@ -267,7 +280,7 @@ export default function App() {
     const secondOffOTAmount = payableSecondOff * 250;
     const totalOTAmount     = normalOTAmount + secondOffOTAmount;
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, prevMonthShortfall };
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, prevMonthShortfall, prevMonthCallsUpToToday };
   }, [records, schedule, selYear, selMonth]);
 
   const leaveStats = useMemo(() => {

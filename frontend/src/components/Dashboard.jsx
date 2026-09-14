@@ -49,6 +49,7 @@ export default function Dashboard({
     secondOffOTAmount = 0,
     totalOTAmount     = 0,
     prevMonthShortfall = 0,
+    prevMonthCallsUpToToday = 0,
   } = summary || {};
 
   const progressPct = useMemo(
@@ -212,6 +213,15 @@ export default function Dashboard({
                     )}
                   </span>
                 </div>
+                {isCurrentMonth && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-dark-800/80 border border-dark-600/50 text-[10px] text-dark-300 font-medium animate-fade-in shadow-sm">
+                    <svg className="w-3 h-3 text-brand-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Last month to date:</span>
+                    <span className="text-brand-300 font-extrabold text-xs ml-0.5">{prevMonthCallsUpToToday}</span>
+                  </div>
+                )}
               </div>
               
               {isCurrentMonth && (
