@@ -50,6 +50,9 @@ export default function Dashboard({
     totalOTAmount     = 0,
     nightShiftDays    = 0,
     nightShiftAmount  = 0,
+    basicSalary       = 0,
+    transportAllowance = 0,
+    totalExpectedPay  = 0,
     prevMonthShortfall = 0,
     prevMonthCallsUpToToday = 0,
   } = summary || {};
@@ -434,19 +437,31 @@ export default function Dashboard({
           )}
 
           {/* ── Financial Summary Card ─────────────────────────────────── */}
-          <div className="bg-gradient-to-r from-brand-900/40 to-emerald-900/30 rounded-xl p-3.5 border border-emerald-500/20 mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-brand-300/80 uppercase tracking-wide mb-0.5">Normal OT ({normalOTHours.toFixed(1)}h)</p>
-              <p className="text-lg font-extrabold tracking-tight text-brand-300 leading-none">
-                Rs. {normalOTAmount.toLocaleString()}
-              </p>
+          <div className="bg-gradient-to-r from-brand-900/40 to-emerald-900/30 rounded-xl p-3.5 border border-emerald-500/20 mb-4">
+            <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-emerald-500/20">
+              <div>
+                <p className="text-[10px] text-brand-300/80 uppercase tracking-wide mb-0.5">Basic Salary</p>
+                <p className="text-sm font-bold text-brand-200">Rs. {basicSalary.toLocaleString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-brand-300/80 uppercase tracking-wide mb-0.5">Transport</p>
+                <p className="text-sm font-bold text-brand-200">Rs. {transportAllowance.toLocaleString()}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] text-emerald-400/80 uppercase tracking-wide mb-0.5">Total Expected Pay</p>
-              <p className="text-2xl font-extrabold tracking-tight text-emerald-400 leading-none drop-shadow-md">
-                <span className="text-sm text-emerald-500/80 mr-1">Rs.</span>
-                {(totalOTAmount + nightShiftAmount).toLocaleString()}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-brand-300/80 uppercase tracking-wide mb-0.5">Normal OT ({normalOTHours.toFixed(1)}h)</p>
+                <p className="text-lg font-extrabold tracking-tight text-brand-300 leading-none">
+                  Rs. {normalOTAmount.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-emerald-400/80 uppercase tracking-wide mb-0.5">Total Expected Pay</p>
+                <p className="text-2xl font-extrabold tracking-tight text-emerald-400 leading-none drop-shadow-md">
+                  <span className="text-sm text-emerald-500/80 mr-1">Rs.</span>
+                  {totalExpectedPay.toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
 

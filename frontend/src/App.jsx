@@ -284,7 +284,11 @@ export default function App() {
     const nightShiftDays    = allDays.reduce((s, d) => s + (d.shiftType === '4:00 PM - 8:00 AM' ? 1 : 0), 0);
     const nightShiftAmount  = nightShiftDays * 600;
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, nightShiftDays, nightShiftAmount, prevMonthShortfall, prevMonthCallsUpToToday };
+    const basicSalary = 30000;
+    const transportAllowance = 15000;
+    const totalExpectedPay = basicSalary + transportAllowance + totalOTAmount + nightShiftAmount;
+
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, nightShiftDays, nightShiftAmount, basicSalary, transportAllowance, totalExpectedPay, prevMonthShortfall, prevMonthCallsUpToToday };
   }, [records, schedule, selYear, selMonth]);
 
   const leaveStats = useMemo(() => {
