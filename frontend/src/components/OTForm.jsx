@@ -197,6 +197,15 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
             nf.otHours = result.hours;
             nf._otResult = result;
           }
+        } else if (scheduled === '4:00 PM - 8:00 AM') {
+          nf.pearlLogoutTime = '00:00';
+          if (nf.pearlLoginTime) {
+            const result = calcOT(nf.pearlLoginTime, '00:00', scheduled);
+            if (result) {
+              nf.otHours = result.hours;
+              nf._otResult = result;
+            }
+          }
         }
         return nf;
       });
@@ -254,15 +263,16 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
     setForm((f) => {
       const updated = { ...f, [name]: value };
       
-      if (name === 'shiftType' && value === '1:00 PM - 10:00 PM') {
-        updated.pearlLoginTime = '13:00';
-        updated.pearlLogoutTime = '22:00';
-        const result = calcOT('13:00', '22:00', value);
-        if (result) {
-          updated.otHours = result.hours;
-          updated._otResult = result;
+      if (name === 'shiftType') {
+        if (value === '1:00 PM - 10:00 PM') {
+          updated.pearlLoginTime = '13:00';
+          updated.pearlLogoutTime = '22:00';
+        } else if (value === '4:00 PM - 8:00 AM') {
+          updated.pearlLogoutTime = '00:00';
         }
-      } else if (name === 'shiftType' || name === 'pearlLoginTime' || name === 'pearlLogoutTime') {
+      }
+      
+      if (['pearlLoginTime', 'pearlLogoutTime', 'shiftType'].includes(name)) {
         if (updated.pearlLoginTime && updated.pearlLogoutTime) {
           const result = calcOT(updated.pearlLoginTime, updated.pearlLogoutTime, updated.shiftType);
           if (result !== null) {
@@ -477,7 +487,8 @@ export default function OTForm({ onSaved, editRecord, onCancelEdit, schedule = {
                 name="pearlLogoutTime"
                 value={form.pearlLogoutTime}
                 onChange={handleChange}
-                className={`input-field ${errors.pearlLogoutTime ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+                disabled={form.shiftType === '4:00 PM - 8:00 AM'}
+                className={`input-field ${errors.pearlLogoutTime ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''} ${form.shiftType === '4:00 PM - 8:00 AM' ? 'opacity-50 cursor-not-allowed bg-dark-700/50' : ''}`}
               />
               {errors.pearlLogoutTime && <p className="text-xs text-red-400 mt-1">{errors.pearlLogoutTime}</p>}
             </div>
