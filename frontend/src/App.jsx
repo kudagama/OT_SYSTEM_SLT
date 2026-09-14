@@ -280,7 +280,11 @@ export default function App() {
     const secondOffOTAmount = payableSecondOff * 250;
     const totalOTAmount     = normalOTAmount + secondOffOTAmount;
 
-    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, prevMonthShortfall, prevMonthCallsUpToToday };
+    // Night Shift Allowance (4:00 PM - 8:00 AM) - Rs 600 per shift
+    const nightShiftDays    = allDays.reduce((s, d) => s + (d.shiftType === '4:00 PM - 8:00 AM' ? 1 : 0), 0);
+    const nightShiftAmount  = nightShiftDays * 600;
+
+    return { totalOTHours, totalOTDays, totalShiftHours, totalShiftDays, totalWorkingHours, totalCalls, secondOffOTHours, secondOffOTDays, normalOTHours, normalOTAmount, secondOffOTAmount, totalOTAmount, nightShiftDays, nightShiftAmount, prevMonthShortfall, prevMonthCallsUpToToday };
   }, [records, schedule, selYear, selMonth]);
 
   const leaveStats = useMemo(() => {
@@ -292,7 +296,10 @@ export default function App() {
         if (shiftType === 'Sick Leave') sick++;
         else if (shiftType === 'Casual Leave') casual++;
         else if (shiftType === 'Annual Leave') annual++;
-        else if (shiftType === 'Half Day Leave') half++;
+        else if (shiftType === 'Half Day Leave') {
+          half++;
+          casual += 0.5;
+        }
       }
     });
     return { sickTaken: sick, casualTaken: casual, annualTaken: annual, halfTaken: half };
